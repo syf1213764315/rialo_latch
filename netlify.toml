@@ -3,15 +3,11 @@
   publish = "dist"
   functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
-  included_files = ["node_modules/sql.js/dist/**", "server/**"]
-
 [functions.api]
-  # 避免 ESM/CJS 混用导致 require(.mjs) 崩溃
   node_bundler = "none"
+  included_files = ["netlify/functions/sql-wasm.wasm"]
 
-# API → Netlify Function（Express）
+# API → 自包含打包函数 api.cjs（build 时生成）
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"

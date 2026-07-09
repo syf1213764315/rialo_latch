@@ -1,5 +1,4 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 export function isServerless() {
   return Boolean(
@@ -10,13 +9,6 @@ export function isServerless() {
 }
 
 export function getProjectRoot() {
-  if (isServerless()) {
-    return process.cwd();
-  }
-  if (typeof import.meta.url === "string" && import.meta.url.length > 0) {
-    const dir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(dir, "..");
-  }
   return process.cwd();
 }
 

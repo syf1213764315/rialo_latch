@@ -45,6 +45,19 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 `;
 
+function resolveWasmPath(file) {
+  const name = file || "sql-wasm.wasm";
+  const candidates = [
+    path.join(process.cwd(), "netlify/functions", name),
+    path.join(process.cwd(), name),
+    path.join(process.cwd(), "node_modules/sql.js/dist", name),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(process.cwd(), "node_modules/sql.js/dist", name);
+}
+
 function createAdapter(sqlDb, dbPath) {
   const persist = () => {
     const dir = path.dirname(dbPath);
@@ -95,7 +108,9 @@ async function initDatabase() {
   fs.mkdirSync(dataDir, { recursive: true });
   const dbPath = path.join(dataDir, "rialo.db");
 
-  const SQL = await initSqlJs();
+  const SQL = await initSqlJs({
+    locateFile: (file) => resolveWasmPath(file),
+  });
   let sqlDb;
 
   if (fs.existsSync(dbPath)) {
@@ -111,5 +126,31 @@ async function initDatabase() {
   return adapter;
 }
 
-const db = await initDatabase();
+let dbInstance = null;
+
+export async function initDb() {
+  if (!dbInstance) {
+    dbInstance = await initDatabase();
+  }
+  return dbInstance;
+}
+
+export function getDb() {
+  if (!dbInstance) {
+    throw new Error("Database not initialized");
+  }
+  return dbInstance;
+}
+
+const db = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const instance = getDb();
+      const value = instance[prop];
+      return typeof value === "function" ? value.bind(instance) : value;
+    },
+  },
+);
+
 export default db;

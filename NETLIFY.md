@@ -38,7 +38,16 @@ https://你的站点.netlify.app/api/auth/discord/callback
 - `https://你的站点.netlify.app/api/auth/discord` → 跳转 Discord 登录
 - 首页右侧打卡墙可公开访问
 
+## 构建说明
+
+`npm run build` 会：
+1. 构建前端 `dist/`
+2. 用 esbuild 将 API 打成**单文件** `netlify/functions/api.cjs`（含 express、serverless-http、sql.js 等）
+3. 复制 `sql-wasm.wasm` 到 `netlify/functions/`
+
+Netlify 部署时 **不要**改 build command，保持 `npm install && npm run build`。
+
 ## 注意
 
-- API 通过 Netlify Functions 运行，数据库使用 **sql.js**（纯 WASM，无原生依赖），数据写在 `/tmp/rialo-latch`。
-- `/tmp` 在冷启动后**可能丢失**，正式环境建议换持久化存储（如 Turso / Netlify Blobs）。
+- API 通过自包含的 `api.cjs` Function 运行，不依赖外部 `node_modules`
+- 数据库使用 sql.js，数据写在 `/tmp/rialo-latch`，冷启动后可能丢失
