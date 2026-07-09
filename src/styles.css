@@ -265,6 +265,41 @@ textarea {
   font: inherit;
   background: var(--bg);
   color: var(--ink);
+  resize: vertical;
+  min-height: 6rem;
+  line-height: 1.5;
+}
+
+textarea:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.request-preview {
+  margin: 0.85rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+}
+
+.request-preview-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.request-line {
+  word-break: break-all;
+  line-height: 1.55;
+  font-size: 0.82rem;
+}
+
+.request-line + .request-line {
+  margin-top: 0.45rem;
 }
 
 input:focus {

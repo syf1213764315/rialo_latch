@@ -6,9 +6,11 @@ export function hashToken(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-export function createSession(userId, days = 14) {
+const PERMANENT_EXPIRES_AT = "2099-12-31T23:59:59.999Z";
+
+export function createSession(userId) {
   const token = nanoid(48);
-  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  const expires = PERMANENT_EXPIRES_AT;
   db.prepare(
     `INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)`,
   ).run(token, userId, expires);
@@ -60,7 +62,7 @@ export function upsertDiscordUser(profile) {
 }
 
 export function createApiKey(userId, name = "default") {
-  const raw = `rl_${nanoid(40)}`;
+  const raw = `lat_${nanoid(40)}`;
   const id = nanoid(12);
   const prefix = raw.slice(0, 10);
   const keyHash = hashToken(raw);

@@ -1,19 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { parseCurlInput } from "./curlParse.js";
 
-const APIS = [
-  {
-    method: "POST",
-    path: "/api/v1/checkin",
-    label: "打卡接口",
-    auth: "Bearer Token",
-  },
-  {
-    method: "GET",
-    path: "/api/v1/checkins",
-    label: "公开打卡",
-    auth: "无需鉴权",
-  },
-];
+const ONLATCH_PROXY_BASE = "https://onlatch.com/proxy";
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -42,6 +30,11 @@ export default function App() {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [curlInput, setCurlInput] = useState("");
+  const [checkinPath, setCheckinPath] = useState("");
+  const [bearerToken, setBearerToken] = useState("");
+  const [checkinMethod, setCheckinMethod] = useState("POST");
+  const [checkinBusy, setCheckinBusy] = useState(false);
 
   const refreshMe = useCallback(async () => {
     const data = await api("/api/auth/me");
@@ -105,6 +98,75 @@ export default function App() {
     }
   };
 
+  const requestPreview = useMemo(() => {
+    const path = checkinPath.trim().replace(/^\/+/, "");
+    if (!path || !bearerToken) return null;
+    return {
+      method: checkinMethod,
+      url: `${ONLATCH_PROXY_BASE}/${path}`,
+      authorization: `Bearer ${bearerToken}`,
+    };
+  }, [checkinPath, bearerToken, checkinMethod]);
+
+  const handleParseCurl = () => {
+    setError(null);
+    const parsed = parseCurlInput(curlInput);
+    if (!parsed.bearer) {
+      setError("未能从 curl 中解析出 Authorization Bearer token");
+      return;
+    }
+    setBearerToken(parsed.bearer);
+    if (parsed.path) setCheckinPath(parsed.path);
+    if (parsed.method) setCheckinMethod(parsed.method);
+    const path = (parsed.path || checkinPath).trim().replace(/^\/+/, "");
+    console.log("[打卡] 解析 curl", {
+      method: parsed.method,
+      url: path ? `${ONLATCH_PROXY_BASE}/${path}` : null,
+      authorization: `Bearer ${parsed.bearer}`,
+    });
+    setMessage("已解析 Authorization 与打卡地址");
+  };
+
+  const handleCheckin = async () => {
+    setError(null);
+    setMessage(null);
+    if (!bearerToken) {
+      setError("请先粘贴 curl 并解析 Authorization");
+      return;
+    }
+    if (!checkinPath.trim()) {
+      setError("请填写打卡地址（onlatch.com/proxy/ 后的路径）");
+      return;
+    }
+
+    const preview = {
+      method: checkinMethod,
+      url: `${ONLATCH_PROXY_BASE}/${checkinPath.trim().replace(/^\/+/, "")}`,
+      authorization: `Bearer ${bearerToken}`,
+    };
+    console.log("[打卡] 发起请求", preview);
+
+    setCheckinBusy(true);
+    try {
+      const data = await api("/api/v1/latch-checkin", {
+        method: "POST",
+        body: JSON.stringify({
+          path: checkinPath.trim(),
+          token: bearerToken,
+          method: checkinMethod,
+        }),
+      });
+      console.log("[打卡] 响应", { status: data.status, ok: data.ok, data: data.data });
+      setMessage(data.ok ? "打卡成功" : `打卡返回 ${data.status}`);
+      await refreshCheckins();
+    } catch (e) {
+      console.error("[打卡] 失败", e);
+      setError(e.message);
+    } finally {
+      setCheckinBusy(false);
+    }
+  };
+
   const logout = async () => {
     await api("/api/auth/logout", { method: "POST", body: "{}" });
     setUser(null);
@@ -155,15 +217,6 @@ export default function App() {
             </a>
           </div>
         </div>
-        <nav className="api-nav">
-          {APIS.map((item) => (
-            <div key={item.path} className="api-pill" title={item.auth}>
-              <span className={`method ${item.method.toLowerCase()}`}>{item.method}</span>
-              <span className="mono path">{item.path}</span>
-              <span className="api-label">{item.label}</span>
-            </div>
-          ))}
-        </nav>
       </header>
 
       {message ? <p className="flash">{message}</p> : null}
@@ -199,10 +252,10 @@ export default function App() {
           <section className="card">
             <h2>API Key</h2>
             {!user ? (
-              <p className="muted">
-                登录后可生成 Key。请求头：
-                <code>Authorization: Bearer &lt;api_key&gt;</code>
-              </p>
+                <p className="muted">
+                  登录后可生成 Key（永久有效）。请求头：
+                  <code>Authorization: Bearer &lt;api_key&gt;</code>
+                </p>
             ) : (
               <>
                 <div className="actions">
@@ -218,10 +271,64 @@ export default function App() {
                     </button>
                   </div>
                 ) : (
-                  <p className="empty">点击上方按钮生成 Key</p>
+                  <p className="empty">点击上方按钮生成 Key（永久有效，不会过期）</p>
                 )}
               </>
             )}
+          </section>
+
+          <section className="card">
+            <h2>打卡</h2>
+            <p className="muted">
+              粘贴 curl 命令，自动提取 <code>Authorization: Bearer</code> 作为请求头。
+            </p>
+            <label>
+              curl 命令
+              <textarea
+                rows={5}
+                placeholder={`curl https://onlatch.com/proxy/example/path \\\n  -H "Authorization: Bearer lat_..."`}
+                value={curlInput}
+                onChange={(e) => setCurlInput(e.target.value)}
+              />
+            </label>
+            <div className="actions">
+              <button type="button" className="btn" onClick={handleParseCurl}>
+                解析
+              </button>
+            </div>
+            {requestPreview ? (
+              <div className="request-preview">
+                <div className="request-preview-title">请求预览</div>
+                <div className="mono request-line">
+                  <span className={`method ${requestPreview.method.toLowerCase()}`}>
+                    {requestPreview.method}
+                  </span>{" "}
+                  {requestPreview.url}
+                </div>
+                <div className="mono request-line">
+                  Authorization: {requestPreview.authorization}
+                </div>
+              </div>
+            ) : null}
+            <label>
+              打卡地址
+              <input
+                type="text"
+                placeholder="example/path（对应 https://onlatch.com/proxy/ 后的路径）"
+                value={checkinPath}
+                onChange={(e) => setCheckinPath(e.target.value)}
+              />
+            </label>
+            <div className="actions">
+              <button
+                type="button"
+                className="btn primary"
+                onClick={handleCheckin}
+                disabled={checkinBusy}
+              >
+                {checkinBusy ? "打卡中…" : "打卡"}
+              </button>
+            </div>
           </section>
         </aside>
 
