@@ -5,7 +5,11 @@
 
 [functions]
   node_bundler = "esbuild"
-  included_files = ["node_modules/sql.js/dist/**"]
+  included_files = ["node_modules/sql.js/dist/**", "server/**"]
+
+[functions.api]
+  # 避免 ESM/CJS 混用导致 require(.mjs) 崩溃
+  node_bundler = "none"
 
 # API → Netlify Function（Express）
 [[redirects]]
