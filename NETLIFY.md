@@ -40,4 +40,5 @@ https://你的站点.netlify.app/api/auth/discord/callback
 
 ## 注意
 
-- API 通过 Netlify Functions 运行，SQLite 数据写在 `/tmp`，**冷启动后可能丢失**。正式环境建议换持久化数据库（如 Turso / Neon）。
+- API 通过 Netlify Functions 运行，数据库使用 **sql.js**（纯 WASM，无原生依赖），数据写在 `/tmp/rialo-latch`。
+- `/tmp` 在冷启动后**可能丢失**，正式环境建议换持久化存储（如 Turso / Netlify Blobs）。
