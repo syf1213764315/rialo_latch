@@ -1,12 +1,10 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import apiRoutes from "./routes/api.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { getProjectRoot } from "./paths.js";
 
 export function createApp({ serveStatic = false } = {}) {
   const app = express();
@@ -23,14 +21,14 @@ export function createApp({ serveStatic = false } = {}) {
   app.use("/api/v1", apiRoutes);
 
   if (serveStatic) {
-    const distDir = path.join(__dirname, "..", "dist");
+    const distDir = path.join(getProjectRoot(), "dist");
     app.use(express.static(distDir));
     app.get(/^(?!\/api).*/, (_req, res) => {
       res.sendFile(path.join(distDir, "index.html"), (err) => {
         if (err) {
           res.status(200).type("html").send(`<!doctype html>
 <html><body style="font-family:sans-serif;padding:2rem">
-  <h1>Rialo Latch API is running</h1>
+  <h1>rialo API is running</h1>
   <p>Frontend not built yet. Run <code>npm run build</code>.</p>
 </body></html>`);
         }

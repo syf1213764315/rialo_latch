@@ -1,19 +1,9 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { getDataDir } from "./paths.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-function resolveDataDir() {
-  // Netlify Functions：可写目录仅 /tmp，数据在冷启动间可能不持久
-  if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    return "/tmp/rialo-latch";
-  }
-  return path.join(__dirname, "..", "data");
-}
-
-const dataDir = resolveDataDir();
+const dataDir = getDataDir();
 fs.mkdirSync(dataDir, { recursive: true });
 
 const db = new Database(path.join(dataDir, "rialo.db"));
