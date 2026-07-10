@@ -55,6 +55,7 @@ export function parseCurlInput(text) {
     body = JSON.stringify({
       userId: "",
       timestamp: new Date().toISOString(),
+      location: {},
     });
   }
 

@@ -2,7 +2,21 @@ export function buildDefaultCheckinBody(discordId) {
   return JSON.stringify({
     userId: discordId ? String(discordId) : "",
     timestamp: new Date().toISOString(),
+    location: {},
   });
+}
+
+function normalizeLocation(payload) {
+  const location = payload.location;
+  if (
+    typeof location === "object" &&
+    location !== null &&
+    !Array.isArray(location)
+  ) {
+    payload.location = location;
+    return;
+  }
+  payload.location = {};
 }
 
 export function enrichCheckinBody(rawBody, discordId) {
@@ -25,16 +39,7 @@ export function enrichCheckinBody(rawBody, discordId) {
     payload.timestamp = String(payload.timestamp);
   }
 
-  if (payload.location !== undefined) {
-    const location = payload.location;
-    if (
-      typeof location !== "object" ||
-      location === null ||
-      Array.isArray(location)
-    ) {
-      delete payload.location;
-    }
-  }
+  normalizeLocation(payload);
 
   return JSON.stringify(payload);
 }

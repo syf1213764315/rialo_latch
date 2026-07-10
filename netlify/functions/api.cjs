@@ -52874,6 +52874,14 @@ function parseCheckinBody(raw) {
     return {};
   }
 }
+function normalizeLocation(payload) {
+  const location = payload.location;
+  if (typeof location === "object" && location !== null && !Array.isArray(location)) {
+    payload.location = location;
+    return;
+  }
+  payload.location = {};
+}
 function buildCheckinPayload(rawBody, bearerToken) {
   const payload = parseCheckinBody(rawBody);
   const user = getUserByApiKey(bearerToken);
@@ -52887,12 +52895,7 @@ function buildCheckinPayload(rawBody, bearerToken) {
   } else if (typeof payload.timestamp !== "string") {
     payload.timestamp = String(payload.timestamp);
   }
-  if (payload.location !== void 0) {
-    const location = payload.location;
-    if (typeof location !== "object" || location === null || Array.isArray(location)) {
-      delete payload.location;
-    }
-  }
+  normalizeLocation(payload);
   return JSON.stringify(payload);
 }
 

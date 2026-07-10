@@ -14,6 +14,19 @@ export function parseCheckinBody(raw) {
   }
 }
 
+function normalizeLocation(payload) {
+  const location = payload.location;
+  if (
+    typeof location === "object" &&
+    location !== null &&
+    !Array.isArray(location)
+  ) {
+    payload.location = location;
+    return;
+  }
+  payload.location = {};
+}
+
 export function buildCheckinPayload(rawBody, bearerToken) {
   const payload = parseCheckinBody(rawBody);
   const user = getUserByApiKey(bearerToken);
@@ -30,16 +43,7 @@ export function buildCheckinPayload(rawBody, bearerToken) {
     payload.timestamp = String(payload.timestamp);
   }
 
-  if (payload.location !== undefined) {
-    const location = payload.location;
-    if (
-      typeof location !== "object" ||
-      location === null ||
-      Array.isArray(location)
-    ) {
-      delete payload.location;
-    }
-  }
+  normalizeLocation(payload);
 
   return JSON.stringify(payload);
 }
