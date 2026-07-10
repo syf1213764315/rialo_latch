@@ -18,7 +18,7 @@ export function createApp({ serveStatic = false } = {}) {
   });
 
   app.use("/api/auth", authRoutes);
-  app.use("/api/v1", apiRoutes);
+  app.use("/api", apiRoutes);
 
   if (serveStatic) {
     const distDir = path.join(getProjectRoot(), "dist");

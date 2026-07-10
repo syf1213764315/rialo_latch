@@ -52872,7 +52872,7 @@ router2.post("/checkin", requireBearer, (req, res) => {
   const record = addCheckin({
     userId: req.user.id,
     method: "POST",
-    endpoint: "/api/v1/checkin",
+    endpoint: "/api/checkin",
     note,
     payload: { note, meta }
   });
@@ -52954,7 +52954,7 @@ function createApp({ serveStatic = false } = {}) {
     res.json({ ok: true, service: "rialo-latch" });
   });
   app.use("/api/auth", auth_default);
-  app.use("/api/v1", api_default);
+  app.use("/api", api_default);
   if (serveStatic) {
     const distDir = import_node_path3.default.join(getProjectRoot(), "dist");
     app.use(import_express3.default.static(distDir));

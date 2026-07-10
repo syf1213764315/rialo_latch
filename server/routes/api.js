@@ -14,7 +14,7 @@ function sanitizeProxyPath(raw) {
 }
 
 /**
- * POST /api/v1/checkin
+ * POST /api/checkin
  * Auth: Bearer <api_key>
  * Body JSON: { note?: string, meta?: object }
  */
@@ -29,7 +29,7 @@ router.post("/checkin", requireBearer, (req, res) => {
   const record = addCheckin({
     userId: req.user.id,
     method: "POST",
-    endpoint: "/api/v1/checkin",
+    endpoint: "/api/checkin",
     note,
     payload: { note, meta },
   });
@@ -48,7 +48,7 @@ router.get("/checkins", (_req, res) => {
 });
 
 /**
- * POST /api/v1/latch-checkin
+ * POST /api/latch-checkin
  * Body: { path: string, token: string, method?: string }
  * Forwards to https://onlatch.com/proxy/<path> with Authorization header.
  */

@@ -42,7 +42,7 @@ export default function App() {
   }, []);
 
   const refreshCheckins = useCallback(async () => {
-    const data = await api("/api/v1/checkins");
+    const data = await api("/api/checkins");
     setCheckins(data.checkins);
   }, []);
 
@@ -148,7 +148,7 @@ export default function App() {
 
     setCheckinBusy(true);
     try {
-      const data = await api("/api/v1/latch-checkin", {
+      const data = await api("/api/latch-checkin", {
         method: "POST",
         body: JSON.stringify({
           path: checkinPath.trim(),
