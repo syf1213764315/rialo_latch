@@ -108,6 +108,13 @@ export function getUserByApiKey(bearerToken) {
   return user;
 }
 
+export function getUserByDiscordId(discordId) {
+  if (!discordId) return null;
+  return (
+    db.prepare(`SELECT * FROM users WHERE discord_id = ?`).get(String(discordId)) ?? null
+  );
+}
+
 export function addCheckin({ userId, method, endpoint, note, payload }) {
   const id = nanoid(14);
   db.prepare(

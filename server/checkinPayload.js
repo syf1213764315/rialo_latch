@@ -29,12 +29,16 @@ function normalizeLocation(payload) {
 
 export function buildCheckinPayload(rawBody, bearerToken) {
   const payload = parseCheckinBody(rawBody);
-  const user = getUserByApiKey(bearerToken);
 
   if (!payload.userId || typeof payload.userId !== "string") {
-    if (user?.discord_id) {
-      payload.userId = String(user.discord_id);
+    if (bearerToken) {
+      const user = getUserByApiKey(bearerToken);
+      if (user?.discord_id) {
+        payload.userId = String(user.discord_id);
+      }
     }
+  } else {
+    payload.userId = String(payload.userId);
   }
 
   if (!payload.timestamp) {

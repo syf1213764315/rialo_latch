@@ -37,24 +37,14 @@ export default function App() {
   const [requestBody, setRequestBody] = useState("{}");
   const [checkinBusy, setCheckinBusy] = useState(false);
   const [hasServerKey, setHasServerKey] = useState(false);
-
-  const applySavedKey = useCallback((key, discordId) => {
-    if (!key) return;
-    setFreshKey(key);
-    setBearerToken(key);
-    setCheckinUrl(CHECKIN_PROXY_URL);
-    setCheckinMethod("POST");
-    setRequestBody(enrichCheckinBody("{}", discordId));
-  }, []);
+  const [showRequestPreview, setShowRequestPreview] = useState(false);
 
   const refreshMe = useCallback(async () => {
     const data = await api("/api/auth/me");
     setUser(data.user);
     if (data.user?.id) {
       const saved = loadApiKey(data.user.id);
-      if (saved) {
-        applySavedKey(saved, data.user.discordId);
-      }
+      if (saved) setFreshKey(saved);
       try {
         const keysData = await api("/api/auth/keys");
         setHasServerKey((keysData.keys || []).length > 0);
@@ -62,7 +52,7 @@ export default function App() {
         setHasServerKey(false);
       }
     }
-  }, [applySavedKey]);
+  }, []);
 
   const refreshCheckins = useCallback(async () => {
     const data = await api("/api/checkins");
@@ -105,15 +95,12 @@ export default function App() {
       });
       setFreshKey(data.key.key);
       setHasServerKey(true);
-      if (user?.id) {
-        saveApiKey(user.id, data.key.key);
-        applySavedKey(data.key.key, user.discordId);
-      }
+      if (user?.id) saveApiKey(user.id, data.key.key);
       setMessage("API Key 已生成并保存");
     } catch (e) {
       const saved = user?.id ? loadApiKey(user.id) : null;
       if (saved) {
-        applySavedKey(saved, user?.discordId);
+        setFreshKey(saved);
         setMessage("已加载本机保存的 API Key");
         return;
       }
@@ -137,11 +124,12 @@ export default function App() {
     setCheckinUrl(parsed.url || "");
     setCheckinMethod(parsed.method || "POST");
     setRequestBody(enrichCheckinBody(parsed.body, user?.discordId));
+    setShowRequestPreview(true);
     return parsed;
   };
 
   const requestPreview = useMemo(() => {
-    if (!checkinUrl || !bearerToken) return null;
+    if (!showRequestPreview || !checkinUrl || !bearerToken) return null;
     const origin =
       typeof window !== "undefined" ? window.location.origin : "";
     return {
@@ -151,7 +139,7 @@ export default function App() {
       origin,
       body: requestBody,
     };
-  }, [checkinUrl, bearerToken, checkinMethod, requestBody]);
+  }, [showRequestPreview, checkinUrl, bearerToken, checkinMethod, requestBody]);
 
   const handleParseCurl = () => {
     setError(null);
@@ -185,15 +173,23 @@ export default function App() {
 
     if (!url || !token) {
       const parsed = parseCurlInput(curlInput);
-      if (!parsed.bearer || !parsed.url) {
-        setError("请先粘贴 curl 并点击解析");
-        return;
+      if (parsed.bearer && parsed.url) {
+        url = parsed.url;
+        token = parsed.bearer;
+        method = parsed.method;
+        body = enrichCheckinBody(parsed.body, user?.discordId);
+      } else {
+        const saved = user?.id ? loadApiKey(user.id) : null;
+        if (saved) {
+          token = saved;
+          url = CHECKIN_PROXY_URL;
+          method = "POST";
+          body = enrichCheckinBody("{}", user.discordId);
+        } else {
+          setError("请先粘贴 curl 并点击解析");
+          return;
+        }
       }
-      applyParsedCurl(parsed);
-      url = parsed.url;
-      token = parsed.bearer;
-      method = parsed.method;
-      body = enrichCheckinBody(parsed.body, user?.discordId);
     } else {
       body = enrichCheckinBody(body, user?.discordId);
     }
@@ -245,6 +241,7 @@ export default function App() {
     setBearerToken("");
     setCheckinUrl("");
     setRequestBody("{}");
+    setShowRequestPreview(false);
     setHasServerKey(false);
     setMessage("已退出登录");
   };
@@ -374,7 +371,10 @@ export default function App() {
                 rows={5}
                 placeholder={`curl https://onlatch.com/proxy/example/path \\\n  -H "Authorization: Bearer lat_..."\n解析后请求：https://onlatch.com/proxy/api/checkin`}
                 value={curlInput}
-                onChange={(e) => setCurlInput(e.target.value)}
+                onChange={(e) => {
+                  setCurlInput(e.target.value);
+                  setShowRequestPreview(false);
+                }}
               />
             </label>
             <div className="actions">

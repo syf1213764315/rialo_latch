@@ -1,17 +1,32 @@
 import { Router } from "express";
-import { requireBearer } from "../auth.js";
 import { buildCheckinPayload } from "../checkinPayload.js";
 import { buildProxyHeaders } from "../proxyHeaders.js";
-import { addCheckin, listCheckins, publicUser } from "../store.js";
+import { addCheckin, getUserByDiscordId, listCheckins, publicUser } from "../store.js";
 
 const router = Router();
 
 /**
  * POST /api/checkin
- * Auth: Bearer <api_key>
- * Body JSON: { note?: string, meta?: object }
+ * Body JSON: { userId: string, timestamp: string, location?: object, note?: string, meta?: object }
+ * 按 body.userId（Discord ID）识别用户，不校验 API Key。
  */
-router.post("/checkin", requireBearer, (req, res) => {
+router.post("/checkin", (req, res) => {
+  const discordId = String(req.body?.userId || "").trim();
+  if (!discordId) {
+    return res.status(400).json({
+      error: "missing_user_id",
+      message: "请提供 userId（Discord ID）",
+    });
+  }
+
+  const user = getUserByDiscordId(discordId);
+  if (!user) {
+    return res.status(404).json({
+      error: "user_not_found",
+      message: "未找到该 userId 对应用户，请先使用 Discord 登录注册",
+    });
+  }
+
   const note =
     typeof req.body?.note === "string" ? req.body.note.slice(0, 200) : null;
   const meta =
@@ -20,19 +35,19 @@ router.post("/checkin", requireBearer, (req, res) => {
       : null;
 
   console.log("[checkin] 收到打卡", {
-    userId: req.user.id,
-    discordId: req.user.discord_id,
-    username: req.user.username,
+    userId: user.id,
+    discordId: user.discord_id,
+    username: user.username,
     body: req.body,
   });
 
   const record = addCheckin({
-    userId: req.user.id,
+    userId: user.id,
     method: "POST",
     endpoint: "/api/checkin",
     note,
     payload: {
-      userId: req.body?.userId,
+      userId: discordId,
       timestamp: req.body?.timestamp,
       location: req.body?.location,
       note,
@@ -43,7 +58,7 @@ router.post("/checkin", requireBearer, (req, res) => {
   res.status(201).json({
     ok: true,
     message: "打卡成功",
-    user: publicUser(req.user),
+    user: publicUser(user),
     checkin: record,
   });
 });
@@ -83,7 +98,7 @@ router.post("/latch-checkin", async (req, res) => {
   if (!parsedBody.userId || typeof parsedBody.userId !== "string") {
     return res.status(400).json({
       error: "missing_user_id",
-      message: "无法从 API Key 解析 userId，请确认 token 为本站生成的 Key",
+      message: "请提供 body.userId（Discord ID）",
     });
   }
 

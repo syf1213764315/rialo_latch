@@ -52522,6 +52522,10 @@ function getUserByApiKey(bearerToken) {
   const { api_key_id: _, ...user } = row;
   return user;
 }
+function getUserByDiscordId(discordId) {
+  if (!discordId) return null;
+  return db_default.prepare(`SELECT * FROM users WHERE discord_id = ?`).get(String(discordId)) ?? null;
+}
 function addCheckin({ userId, method, endpoint, note, payload }) {
   const id = nanoid(14);
   db_default.prepare(
@@ -52595,25 +52599,6 @@ function requireSession(req, res, next) {
   const user = getSessionUser(getSessionToken(req));
   if (!user) {
     return res.status(401).json({ error: "unauthorized", message: "\u8BF7\u5148\u4F7F\u7528 Discord \u767B\u5F55" });
-  }
-  req.user = user;
-  next();
-}
-function requireBearer(req, res, next) {
-  const header = req.headers.authorization || "";
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  if (!match) {
-    return res.status(401).json({
-      error: "missing_bearer_token",
-      message: "\u8BF7\u5728 Authorization \u5934\u4E2D\u63D0\u4F9B Bearer token\uFF08API Key\uFF09"
-    });
-  }
-  const user = getUserByApiKey(match[1].trim());
-  if (!user) {
-    return res.status(401).json({
-      error: "invalid_api_key",
-      message: "API Key \u65E0\u6548\u6216\u5DF2\u64A4\u9500"
-    });
   }
   req.user = user;
   next();
@@ -52901,11 +52886,15 @@ function normalizeLocation(payload) {
 }
 function buildCheckinPayload(rawBody, bearerToken) {
   const payload = parseCheckinBody(rawBody);
-  const user = getUserByApiKey(bearerToken);
   if (!payload.userId || typeof payload.userId !== "string") {
-    if (user?.discord_id) {
-      payload.userId = String(user.discord_id);
+    if (bearerToken) {
+      const user = getUserByApiKey(bearerToken);
+      if (user?.discord_id) {
+        payload.userId = String(user.discord_id);
+      }
     }
+  } else {
+    payload.userId = String(payload.userId);
   }
   if (!payload.timestamp) {
     payload.timestamp = (/* @__PURE__ */ new Date()).toISOString();
@@ -52933,22 +52922,36 @@ function buildProxyHeaders(authorization) {
 
 // server/routes/api.js
 var router2 = (0, import_express2.Router)();
-router2.post("/checkin", requireBearer, (req, res) => {
+router2.post("/checkin", (req, res) => {
+  const discordId = String(req.body?.userId || "").trim();
+  if (!discordId) {
+    return res.status(400).json({
+      error: "missing_user_id",
+      message: "\u8BF7\u63D0\u4F9B userId\uFF08Discord ID\uFF09"
+    });
+  }
+  const user = getUserByDiscordId(discordId);
+  if (!user) {
+    return res.status(404).json({
+      error: "user_not_found",
+      message: "\u672A\u627E\u5230\u8BE5 userId \u5BF9\u5E94\u7528\u6237\uFF0C\u8BF7\u5148\u4F7F\u7528 Discord \u767B\u5F55\u6CE8\u518C"
+    });
+  }
   const note = typeof req.body?.note === "string" ? req.body.note.slice(0, 200) : null;
   const meta = req.body?.meta && typeof req.body.meta === "object" && !Array.isArray(req.body.meta) ? req.body.meta : null;
   console.log("[checkin] \u6536\u5230\u6253\u5361", {
-    userId: req.user.id,
-    discordId: req.user.discord_id,
-    username: req.user.username,
+    userId: user.id,
+    discordId: user.discord_id,
+    username: user.username,
     body: req.body
   });
   const record = addCheckin({
-    userId: req.user.id,
+    userId: user.id,
     method: "POST",
     endpoint: "/api/checkin",
     note,
     payload: {
-      userId: req.body?.userId,
+      userId: discordId,
       timestamp: req.body?.timestamp,
       location: req.body?.location,
       note,
@@ -52958,7 +52961,7 @@ router2.post("/checkin", requireBearer, (req, res) => {
   res.status(201).json({
     ok: true,
     message: "\u6253\u5361\u6210\u529F",
-    user: publicUser(req.user),
+    user: publicUser(user),
     checkin: record
   });
 });
@@ -52987,7 +52990,7 @@ router2.post("/latch-checkin", async (req, res) => {
   if (!parsedBody.userId || typeof parsedBody.userId !== "string") {
     return res.status(400).json({
       error: "missing_user_id",
-      message: "\u65E0\u6CD5\u4ECE API Key \u89E3\u6790 userId\uFF0C\u8BF7\u786E\u8BA4 token \u4E3A\u672C\u7AD9\u751F\u6210\u7684 Key"
+      message: "\u8BF7\u63D0\u4F9B body.userId\uFF08Discord ID\uFF09"
     });
   }
   const authorization = `Bearer ${token}`;
