@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { parseCurlInput } from "./curlParse.js";
+import { parseCurlInput, CHECKIN_PROXY_URL } from "./curlParse.js";
 import { enrichCheckinBody } from "./checkinBody.js";
+import { clearApiKey, loadApiKey, saveApiKey } from "./storage.js";
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -35,11 +36,33 @@ export default function App() {
   const [checkinMethod, setCheckinMethod] = useState("POST");
   const [requestBody, setRequestBody] = useState("{}");
   const [checkinBusy, setCheckinBusy] = useState(false);
+  const [hasServerKey, setHasServerKey] = useState(false);
+
+  const applySavedKey = useCallback((key, discordId) => {
+    if (!key) return;
+    setFreshKey(key);
+    setBearerToken(key);
+    setCheckinUrl(CHECKIN_PROXY_URL);
+    setCheckinMethod("POST");
+    setRequestBody(enrichCheckinBody("{}", discordId));
+  }, []);
 
   const refreshMe = useCallback(async () => {
     const data = await api("/api/auth/me");
     setUser(data.user);
-  }, []);
+    if (data.user?.id) {
+      const saved = loadApiKey(data.user.id);
+      if (saved) {
+        applySavedKey(saved, data.user.discordId);
+      }
+      try {
+        const keysData = await api("/api/auth/keys");
+        setHasServerKey((keysData.keys || []).length > 0);
+      } catch {
+        setHasServerKey(false);
+      }
+    }
+  }, [applySavedKey]);
 
   const refreshCheckins = useCallback(async () => {
     const data = await api("/api/checkins");
@@ -73,16 +96,27 @@ export default function App() {
     return user.globalName || user.username;
   }, [user]);
 
-  const createKey = async () => {
+  const createKey = async (force = false) => {
     setError(null);
     try {
       const data = await api("/api/auth/keys", {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify(force ? { force: true } : {}),
       });
       setFreshKey(data.key.key);
-      setMessage("API Key 已生成");
+      setHasServerKey(true);
+      if (user?.id) {
+        saveApiKey(user.id, data.key.key);
+        applySavedKey(data.key.key, user.discordId);
+      }
+      setMessage("API Key 已生成并保存");
     } catch (e) {
+      const saved = user?.id ? loadApiKey(user.id) : null;
+      if (saved) {
+        applySavedKey(saved, user?.discordId);
+        setMessage("已加载本机保存的 API Key");
+        return;
+      }
       setError(e.message);
     }
   };
@@ -108,10 +142,13 @@ export default function App() {
 
   const requestPreview = useMemo(() => {
     if (!checkinUrl || !bearerToken) return null;
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
     return {
       method: checkinMethod,
       url: checkinUrl,
       authorization: `Bearer ${bearerToken}`,
+      origin,
       body: requestBody,
     };
   }, [checkinUrl, bearerToken, checkinMethod, requestBody]);
@@ -201,9 +238,14 @@ export default function App() {
   };
 
   const logout = async () => {
+    if (user?.id) clearApiKey(user.id);
     await api("/api/auth/logout", { method: "POST", body: "{}" });
     setUser(null);
     setFreshKey(null);
+    setBearerToken("");
+    setCheckinUrl("");
+    setRequestBody("{}");
+    setHasServerKey(false);
     setMessage("已退出登录");
   };
 
@@ -292,9 +334,16 @@ export default function App() {
             ) : (
               <>
                 <div className="actions">
-                  <button type="button" className="btn primary" onClick={createKey}>
-                    生成 API Key
-                  </button>
+                  {!freshKey ? (
+                    <button type="button" className="btn primary" onClick={() => createKey(false)}>
+                      {hasServerKey ? "加载已保存 Key" : "生成 API Key"}
+                    </button>
+                  ) : null}
+                  {hasServerKey ? (
+                    <button type="button" className="btn" onClick={() => createKey(true)}>
+                      重新生成
+                    </button>
+                  ) : null}
                 </div>
                 {freshKey ? (
                   <div className="key-banner">
@@ -304,7 +353,11 @@ export default function App() {
                     </button>
                   </div>
                 ) : (
-                  <p className="empty">点击上方按钮生成 Key（永久有效，不会过期）</p>
+                  <p className="empty">
+                    {hasServerKey
+                      ? "本机未找到已保存 Key，可点击加载或重新生成"
+                      : "点击上方按钮生成 Key（永久有效，本机会记住）"}
+                  </p>
                 )}
               </>
             )}
@@ -340,6 +393,9 @@ export default function App() {
                 </div>
                 <div className="mono request-line">
                   Authorization: {requestPreview.authorization}
+                </div>
+                <div className="mono request-line">
+                  Origin: {requestPreview.origin || "(服务端使用 APP_URL)"}
                 </div>
                 {requestPreview.method !== "GET" && requestPreview.method !== "HEAD" ? (
                   <div className="mono request-line">Body: {requestPreview.body}</div>

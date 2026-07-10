@@ -197,6 +197,21 @@ router.get("/keys", requireSession, (req, res) => {
 });
 
 router.post("/keys", requireSession, (req, res) => {
+  const existing = listApiKeys(req.user.id);
+  if (existing.length > 0 && !req.body?.force) {
+    return res.status(409).json({
+      error: "key_exists",
+      message: "已有 API Key，请使用已保存的 Key",
+      keys: existing,
+    });
+  }
+
+  if (req.body?.force) {
+    for (const key of existing) {
+      revokeApiKey(req.user.id, key.id);
+    }
+  }
+
   const name = String(req.body?.name || "default").slice(0, 64);
   const created = createApiKey(req.user.id, name);
   res.status(201).json({

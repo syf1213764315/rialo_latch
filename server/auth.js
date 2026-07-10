@@ -12,11 +12,17 @@ export function getSessionToken(req) {
 }
 
 export function setSessionCookie(res, token, expiresAt) {
+  const appUrl = process.env.APP_URL || "";
+  const secure =
+    appUrl.startsWith("https://") || process.env.NODE_ENV === "production";
+  const maxAge = 10 * 365 * 24 * 60 * 60;
+
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure,
     expires: new Date(expiresAt),
+    maxAge,
     path: "/",
   });
 }

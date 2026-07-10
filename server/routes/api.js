@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireBearer } from "../auth.js";
 import { buildCheckinPayload } from "../checkinPayload.js";
+import { buildProxyHeaders } from "../proxyHeaders.js";
 import { addCheckin, listCheckins, publicUser } from "../store.js";
 
 const router = Router();
@@ -89,13 +90,11 @@ router.post("/latch-checkin", async (req, res) => {
   const authorization = `Bearer ${token}`;
   const tokenPreview =
     token.length > 16 ? `${token.slice(0, 10)}…${token.slice(-6)}` : token;
+  const proxyHeaders = buildProxyHeaders(authorization);
 
   const fetchOptions = {
     method,
-    headers: {
-      Authorization: authorization,
-      "Content-Type": "application/json",
-    },
+    headers: proxyHeaders,
   };
   if (method !== "GET" && method !== "HEAD") {
     fetchOptions.body = body;
@@ -104,8 +103,11 @@ router.post("/latch-checkin", async (req, res) => {
   console.log("[latch-checkin] 发起请求", {
     method,
     url,
+    headers: {
+      ...proxyHeaders,
+      Authorization: `Bearer ${tokenPreview}`,
+    },
     body: method === "GET" || method === "HEAD" ? undefined : body,
-    authorization: `Bearer ${tokenPreview}`,
   });
 
   try {
@@ -132,6 +134,7 @@ router.post("/latch-checkin", async (req, res) => {
       method,
       url,
       authorization,
+      origin: proxyHeaders.Origin,
       body: method === "GET" || method === "HEAD" ? undefined : body,
       data,
     });

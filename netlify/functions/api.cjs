@@ -52576,11 +52576,15 @@ function getSessionToken(req) {
   return req.cookies?.[SESSION_COOKIE] || null;
 }
 function setSessionCookie(res, token, expiresAt) {
+  const appUrl = process.env.APP_URL || "";
+  const secure = appUrl.startsWith("https://") || process.env.NODE_ENV === "production";
+  const maxAge = 10 * 365 * 24 * 60 * 60;
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure,
     expires: new Date(expiresAt),
+    maxAge,
     path: "/"
   });
 }
@@ -52824,6 +52828,19 @@ router.get("/keys", requireSession, (req, res) => {
   res.json({ keys: listApiKeys(req.user.id) });
 });
 router.post("/keys", requireSession, (req, res) => {
+  const existing = listApiKeys(req.user.id);
+  if (existing.length > 0 && !req.body?.force) {
+    return res.status(409).json({
+      error: "key_exists",
+      message: "\u5DF2\u6709 API Key\uFF0C\u8BF7\u4F7F\u7528\u5DF2\u4FDD\u5B58\u7684 Key",
+      keys: existing
+    });
+  }
+  if (req.body?.force) {
+    for (const key of existing) {
+      revokeApiKey(req.user.id, key.id);
+    }
+  }
   const name = String(req.body?.name || "default").slice(0, 64);
   const created = createApiKey(req.user.id, name);
   res.status(201).json({
@@ -52899,6 +52916,21 @@ function buildCheckinPayload(rawBody, bearerToken) {
   return JSON.stringify(payload);
 }
 
+// server/proxyHeaders.js
+function getAppOrigin() {
+  const appUrl = process.env.APP_URL || "http://localhost:8787";
+  return appUrl.replace(/\/$/, "");
+}
+function buildProxyHeaders(authorization) {
+  const origin = getAppOrigin();
+  return {
+    Authorization: authorization,
+    "Content-Type": "application/json",
+    Origin: origin,
+    Referer: `${origin}/`
+  };
+}
+
 // server/routes/api.js
 var router2 = (0, import_express2.Router)();
 router2.post("/checkin", requireBearer, (req, res) => {
@@ -52960,12 +52992,10 @@ router2.post("/latch-checkin", async (req, res) => {
   }
   const authorization = `Bearer ${token}`;
   const tokenPreview = token.length > 16 ? `${token.slice(0, 10)}\u2026${token.slice(-6)}` : token;
+  const proxyHeaders = buildProxyHeaders(authorization);
   const fetchOptions = {
     method,
-    headers: {
-      Authorization: authorization,
-      "Content-Type": "application/json"
-    }
+    headers: proxyHeaders
   };
   if (method !== "GET" && method !== "HEAD") {
     fetchOptions.body = body;
@@ -52973,8 +53003,11 @@ router2.post("/latch-checkin", async (req, res) => {
   console.log("[latch-checkin] \u53D1\u8D77\u8BF7\u6C42", {
     method,
     url,
-    body: method === "GET" || method === "HEAD" ? void 0 : body,
-    authorization: `Bearer ${tokenPreview}`
+    headers: {
+      ...proxyHeaders,
+      Authorization: `Bearer ${tokenPreview}`
+    },
+    body: method === "GET" || method === "HEAD" ? void 0 : body
   });
   try {
     const upstream = await fetch(url, fetchOptions);
@@ -52997,6 +53030,7 @@ router2.post("/latch-checkin", async (req, res) => {
       method,
       url,
       authorization,
+      origin: proxyHeaders.Origin,
       body: method === "GET" || method === "HEAD" ? void 0 : body,
       data
     });
