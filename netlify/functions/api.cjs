@@ -52861,12 +52861,49 @@ var auth_default = router;
 
 // server/routes/api.js
 var import_express2 = __toESM(require_express2(), 1);
+
+// server/checkinPayload.js
+function parseCheckinBody(raw) {
+  if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+    return { ...raw };
+  }
+  try {
+    const parsed = JSON.parse(String(raw || "{}"));
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function buildCheckinPayload(rawBody, bearerToken) {
+  const payload = parseCheckinBody(rawBody);
+  const user = getUserByApiKey(bearerToken);
+  if (!payload.userId || typeof payload.userId !== "string") {
+    if (user?.discord_id) {
+      payload.userId = String(user.discord_id);
+    }
+  }
+  if (!payload.timestamp) {
+    payload.timestamp = (/* @__PURE__ */ new Date()).toISOString();
+  } else if (typeof payload.timestamp !== "string") {
+    payload.timestamp = String(payload.timestamp);
+  }
+  if (payload.location !== void 0) {
+    const location = payload.location;
+    if (typeof location !== "object" || location === null || Array.isArray(location)) {
+      delete payload.location;
+    }
+  }
+  return JSON.stringify(payload);
+}
+
+// server/routes/api.js
 var router2 = (0, import_express2.Router)();
 router2.post("/checkin", requireBearer, (req, res) => {
   const note = typeof req.body?.note === "string" ? req.body.note.slice(0, 200) : null;
   const meta = req.body?.meta && typeof req.body.meta === "object" && !Array.isArray(req.body.meta) ? req.body.meta : null;
   console.log("[checkin] \u6536\u5230\u6253\u5361", {
     userId: req.user.id,
+    discordId: req.user.discord_id,
     username: req.user.username,
     body: req.body
   });
@@ -52875,7 +52912,13 @@ router2.post("/checkin", requireBearer, (req, res) => {
     method: "POST",
     endpoint: "/api/checkin",
     note,
-    payload: { note, meta }
+    payload: {
+      userId: req.body?.userId,
+      timestamp: req.body?.timestamp,
+      location: req.body?.location,
+      note,
+      meta
+    }
   });
   res.status(201).json({
     ok: true,
@@ -52891,7 +52934,8 @@ router2.post("/latch-checkin", async (req, res) => {
   const url = String(req.body?.url || "").trim();
   const token = String(req.body?.token || "").trim();
   const method = String(req.body?.method || "POST").toUpperCase();
-  const body = req.body?.body !== void 0 ? String(req.body.body) : "{}";
+  const rawBody = req.body?.body !== void 0 ? String(req.body.body) : "{}";
+  const body = buildCheckinPayload(rawBody, token);
   if (!url || !token) {
     return res.status(400).json({
       error: "missing_fields",
@@ -52902,6 +52946,13 @@ router2.post("/latch-checkin", async (req, res) => {
     return res.status(400).json({
       error: "invalid_url",
       message: "\u4EC5\u652F\u6301 https://onlatch.com/proxy/ \u5730\u5740"
+    });
+  }
+  const parsedBody = JSON.parse(body);
+  if (!parsedBody.userId || typeof parsedBody.userId !== "string") {
+    return res.status(400).json({
+      error: "missing_user_id",
+      message: "\u65E0\u6CD5\u4ECE API Key \u89E3\u6790 userId\uFF0C\u8BF7\u786E\u8BA4 token \u4E3A\u672C\u7AD9\u751F\u6210\u7684 Key"
     });
   }
   const authorization = `Bearer ${token}`;

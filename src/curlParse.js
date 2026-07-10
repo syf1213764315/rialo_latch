@@ -51,6 +51,12 @@ export function parseCurlInput(text) {
       break;
     }
   }
+  if (body === "{}") {
+    body = JSON.stringify({
+      userId: "",
+      timestamp: new Date().toISOString(),
+    });
+  }
 
   return { bearer, url, method, body };
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { parseCurlInput } from "./curlParse.js";
+import { enrichCheckinBody } from "./checkinBody.js";
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -101,7 +102,7 @@ export default function App() {
     setBearerToken(parsed.bearer || "");
     setCheckinUrl(parsed.url || "");
     setCheckinMethod(parsed.method || "POST");
-    setRequestBody(parsed.body || "{}");
+    setRequestBody(enrichCheckinBody(parsed.body, user?.discordId));
     return parsed;
   };
 
@@ -155,7 +156,9 @@ export default function App() {
       url = parsed.url;
       token = parsed.bearer;
       method = parsed.method;
-      body = parsed.body;
+      body = enrichCheckinBody(parsed.body, user?.discordId);
+    } else {
+      body = enrichCheckinBody(body, user?.discordId);
     }
 
     const preview = {

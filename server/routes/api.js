@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireBearer } from "../auth.js";
+import { buildCheckinPayload } from "../checkinPayload.js";
 import { addCheckin, listCheckins, publicUser } from "../store.js";
 
 const router = Router();
@@ -19,6 +20,7 @@ router.post("/checkin", requireBearer, (req, res) => {
 
   console.log("[checkin] 收到打卡", {
     userId: req.user.id,
+    discordId: req.user.discord_id,
     username: req.user.username,
     body: req.body,
   });
@@ -28,7 +30,13 @@ router.post("/checkin", requireBearer, (req, res) => {
     method: "POST",
     endpoint: "/api/checkin",
     note,
-    payload: { note, meta },
+    payload: {
+      userId: req.body?.userId,
+      timestamp: req.body?.timestamp,
+      location: req.body?.location,
+      note,
+      meta,
+    },
   });
 
   res.status(201).json({
@@ -53,7 +61,8 @@ router.post("/latch-checkin", async (req, res) => {
   const url = String(req.body?.url || "").trim();
   const token = String(req.body?.token || "").trim();
   const method = String(req.body?.method || "POST").toUpperCase();
-  const body = req.body?.body !== undefined ? String(req.body.body) : "{}";
+  const rawBody = req.body?.body !== undefined ? String(req.body.body) : "{}";
+  const body = buildCheckinPayload(rawBody, token);
 
   if (!url || !token) {
     return res.status(400).json({
@@ -66,6 +75,14 @@ router.post("/latch-checkin", async (req, res) => {
     return res.status(400).json({
       error: "invalid_url",
       message: "仅支持 https://onlatch.com/proxy/ 地址",
+    });
+  }
+
+  const parsedBody = JSON.parse(body);
+  if (!parsedBody.userId || typeof parsedBody.userId !== "string") {
+    return res.status(400).json({
+      error: "missing_user_id",
+      message: "无法从 API Key 解析 userId，请确认 token 为本站生成的 Key",
     });
   }
 
