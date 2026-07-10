@@ -52526,6 +52526,29 @@ function getUserByDiscordId(discordId) {
   if (!discordId) return null;
   return db_default.prepare(`SELECT * FROM users WHERE discord_id = ?`).get(String(discordId)) ?? null;
 }
+function defaultAvatarFor(discordId) {
+  let index = 0;
+  try {
+    index = Number(BigInt(String(discordId)) % 5n);
+  } catch {
+    index = 0;
+  }
+  return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+}
+function ensureUserByDiscordId(discordId, profile = {}) {
+  const id = String(discordId);
+  const existing = getUserByDiscordId(id);
+  if (existing) return existing;
+  const newId = nanoid(16);
+  const username = typeof profile.username === "string" && profile.username.trim() || `user_${id.slice(-4)}`;
+  const globalName = typeof profile.globalName === "string" && profile.globalName.trim() ? profile.globalName.trim() : null;
+  const avatar = typeof profile.avatar === "string" && profile.avatar.trim() || defaultAvatarFor(id);
+  db_default.prepare(
+    `INSERT INTO users (id, discord_id, username, global_name, avatar)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(newId, id, username, globalName, avatar);
+  return getUserByDiscordId(id);
+}
 function addCheckin({ userId, method, endpoint, note, payload }) {
   const id = nanoid(14);
   db_default.prepare(
@@ -52930,13 +52953,11 @@ router2.post("/checkin", (req, res) => {
       message: "\u8BF7\u63D0\u4F9B userId\uFF08Discord ID\uFF09"
     });
   }
-  const user = getUserByDiscordId(discordId);
-  if (!user) {
-    return res.status(404).json({
-      error: "user_not_found",
-      message: "\u672A\u627E\u5230\u8BE5 userId \u5BF9\u5E94\u7528\u6237\uFF0C\u8BF7\u5148\u4F7F\u7528 Discord \u767B\u5F55\u6CE8\u518C"
-    });
-  }
+  const user = ensureUserByDiscordId(discordId, {
+    username: req.body?.username,
+    globalName: req.body?.globalName,
+    avatar: req.body?.avatar
+  });
   const note = typeof req.body?.note === "string" ? req.body.note.slice(0, 200) : null;
   const meta = req.body?.meta && typeof req.body.meta === "object" && !Array.isArray(req.body.meta) ? req.body.meta : null;
   console.log("[checkin] \u6536\u5230\u6253\u5361", {

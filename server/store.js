@@ -115,6 +115,41 @@ export function getUserByDiscordId(discordId) {
   );
 }
 
+function defaultAvatarFor(discordId) {
+  let index = 0;
+  try {
+    index = Number(BigInt(String(discordId)) % 5n);
+  } catch {
+    index = 0;
+  }
+  return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+}
+
+export function ensureUserByDiscordId(discordId, profile = {}) {
+  const id = String(discordId);
+  const existing = getUserByDiscordId(id);
+  if (existing) return existing;
+
+  const newId = nanoid(16);
+  const username =
+    (typeof profile.username === "string" && profile.username.trim()) ||
+    `user_${id.slice(-4)}`;
+  const globalName =
+    typeof profile.globalName === "string" && profile.globalName.trim()
+      ? profile.globalName.trim()
+      : null;
+  const avatar =
+    (typeof profile.avatar === "string" && profile.avatar.trim()) ||
+    defaultAvatarFor(id);
+
+  db.prepare(
+    `INSERT INTO users (id, discord_id, username, global_name, avatar)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(newId, id, username, globalName, avatar);
+
+  return getUserByDiscordId(id);
+}
+
 export function addCheckin({ userId, method, endpoint, note, payload }) {
   const id = nanoid(14);
   db.prepare(

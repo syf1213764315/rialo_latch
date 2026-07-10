@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { buildCheckinPayload } from "../checkinPayload.js";
 import { buildProxyHeaders } from "../proxyHeaders.js";
-import { addCheckin, getUserByDiscordId, listCheckins, publicUser } from "../store.js";
+import { addCheckin, ensureUserByDiscordId, listCheckins, publicUser } from "../store.js";
 
 const router = Router();
 
@@ -19,13 +19,11 @@ router.post("/checkin", (req, res) => {
     });
   }
 
-  const user = getUserByDiscordId(discordId);
-  if (!user) {
-    return res.status(404).json({
-      error: "user_not_found",
-      message: "未找到该 userId 对应用户，请先使用 Discord 登录注册",
-    });
-  }
+  const user = ensureUserByDiscordId(discordId, {
+    username: req.body?.username,
+    globalName: req.body?.globalName,
+    avatar: req.body?.avatar,
+  });
 
   const note =
     typeof req.body?.note === "string" ? req.body.note.slice(0, 200) : null;
