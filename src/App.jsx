@@ -310,7 +310,7 @@ export default function App() {
               curl 命令
               <textarea
                 rows={5}
-                placeholder={`curl https://onlatch.com/proxy/example/path \\\n  -H "Authorization: Bearer lat_..."`}
+                placeholder={`curl https://onlatch.com/proxy/example/path \\\n  -H "Authorization: Bearer lat_..."\n解析后请求：https://onlatch.com/proxy/api/checkin`}
                 value={curlInput}
                 onChange={(e) => setCurlInput(e.target.value)}
               />

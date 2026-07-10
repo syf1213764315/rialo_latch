@@ -1,3 +1,7 @@
+const ONLATCH_PROXY_BASE = "https://onlatch.com/proxy";
+/** onlatch proxy 后的打卡接口路径（对应本站 POST /api/checkin） */
+export const CHECKIN_PROXY_URL = `${ONLATCH_PROXY_BASE}/api/checkin`;
+
 export function parseCurlInput(text) {
   const normalized = String(text || "")
     .replace(/\\\r?\n/g, " ")
@@ -23,6 +27,9 @@ export function parseCurlInput(text) {
   const urlMatch = normalized.match(/https?:\/\/[^\s'"\\]+/i);
   if (urlMatch?.[0]) {
     url = urlMatch[0].replace(/['"]/g, "");
+  }
+  if (url && /onlatch\.com\/proxy/i.test(url)) {
+    url = CHECKIN_PROXY_URL;
   }
 
   let method = "POST";
