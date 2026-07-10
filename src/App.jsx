@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { parseCurlInput } from "./curlParse.js";
 
-const ONLATCH_PROXY_BASE = "https://onlatch.com/proxy";
-
 async function api(path, options = {}) {
   const res = await fetch(path, {
     credentials: "include",
@@ -31,9 +29,10 @@ export default function App() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [curlInput, setCurlInput] = useState("");
-  const [checkinPath, setCheckinPath] = useState("");
+  const [checkinUrl, setCheckinUrl] = useState("");
   const [bearerToken, setBearerToken] = useState("");
   const [checkinMethod, setCheckinMethod] = useState("POST");
+  const [requestBody, setRequestBody] = useState("{}");
   const [checkinBusy, setCheckinBusy] = useState(false);
 
   const refreshMe = useCallback(async () => {
@@ -98,15 +97,23 @@ export default function App() {
     }
   };
 
+  const applyParsedCurl = (parsed) => {
+    setBearerToken(parsed.bearer || "");
+    setCheckinUrl(parsed.url || "");
+    setCheckinMethod(parsed.method || "POST");
+    setRequestBody(parsed.body || "{}");
+    return parsed;
+  };
+
   const requestPreview = useMemo(() => {
-    const path = checkinPath.trim().replace(/^\/+/, "");
-    if (!path || !bearerToken) return null;
+    if (!checkinUrl || !bearerToken) return null;
     return {
       method: checkinMethod,
-      url: `${ONLATCH_PROXY_BASE}/${path}`,
+      url: checkinUrl,
       authorization: `Bearer ${bearerToken}`,
+      body: requestBody,
     };
-  }, [checkinPath, bearerToken, checkinMethod]);
+  }, [checkinUrl, bearerToken, checkinMethod, requestBody]);
 
   const handleParseCurl = () => {
     setError(null);
@@ -115,49 +122,66 @@ export default function App() {
       setError("未能从 curl 中解析出 Authorization Bearer token");
       return;
     }
-    setBearerToken(parsed.bearer);
-    if (parsed.path) setCheckinPath(parsed.path);
-    if (parsed.method) setCheckinMethod(parsed.method);
-    const path = (parsed.path || checkinPath).trim().replace(/^\/+/, "");
+    if (!parsed.url) {
+      setError("未能从 curl 中解析出打卡地址");
+      return;
+    }
+    applyParsedCurl(parsed);
     console.log("[打卡] 解析 curl", {
       method: parsed.method,
-      url: path ? `${ONLATCH_PROXY_BASE}/${path}` : null,
+      url: parsed.url,
       authorization: `Bearer ${parsed.bearer}`,
+      body: parsed.body,
     });
-    setMessage("已解析 Authorization 与打卡地址");
+    setMessage("已解析打卡地址、Authorization 与 Body");
   };
 
   const handleCheckin = async () => {
     setError(null);
     setMessage(null);
-    if (!bearerToken) {
-      setError("请先粘贴 curl 并解析 Authorization");
-      return;
-    }
-    if (!checkinPath.trim()) {
-      setError("请填写打卡地址（onlatch.com/proxy/ 后的路径）");
-      return;
+
+    let url = checkinUrl;
+    let token = bearerToken;
+    let method = checkinMethod;
+    let body = requestBody;
+
+    if (!url || !token) {
+      const parsed = parseCurlInput(curlInput);
+      if (!parsed.bearer || !parsed.url) {
+        setError("请先粘贴 curl 并点击解析");
+        return;
+      }
+      applyParsedCurl(parsed);
+      url = parsed.url;
+      token = parsed.bearer;
+      method = parsed.method;
+      body = parsed.body;
     }
 
     const preview = {
-      method: checkinMethod,
-      url: `${ONLATCH_PROXY_BASE}/${checkinPath.trim().replace(/^\/+/, "")}`,
-      authorization: `Bearer ${bearerToken}`,
+      method,
+      url,
+      authorization: `Bearer ${token}`,
+      body,
     };
     console.log("[打卡] 发起请求", preview);
 
     setCheckinBusy(true);
     try {
-      const data = await api("/api/latch-checkin", {
-        method: "POST",
-        body: JSON.stringify({
-          path: checkinPath.trim(),
-          token: bearerToken,
-          method: checkinMethod,
-        }),
+      const res = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: method === "GET" || method === "HEAD" ? undefined : body,
       });
-      console.log("[打卡] 响应", { status: data.status, ok: data.ok, data: data.data });
-      setMessage(data.ok ? "打卡成功" : `打卡返回 ${data.status}`);
+      const data = await res.json().catch(() => ({}));
+      console.log("[打卡] 响应", { status: res.status, ok: res.ok, data });
+      if (!res.ok) {
+        throw new Error(data.message || data.error || `HTTP ${res.status}`);
+      }
+      setMessage(data.message || "打卡成功");
       await refreshCheckins();
     } catch (e) {
       console.error("[打卡] 失败", e);
@@ -280,7 +304,7 @@ export default function App() {
           <section className="card">
             <h2>打卡</h2>
             <p className="muted">
-              粘贴 curl 命令，自动提取 <code>Authorization: Bearer</code> 作为请求头。
+              粘贴 curl 命令，解析出打卡地址、Authorization 与 Body，点击打卡直接请求。
             </p>
             <label>
               curl 命令
@@ -308,17 +332,11 @@ export default function App() {
                 <div className="mono request-line">
                   Authorization: {requestPreview.authorization}
                 </div>
+                {requestPreview.method !== "GET" && requestPreview.method !== "HEAD" ? (
+                  <div className="mono request-line">Body: {requestPreview.body}</div>
+                ) : null}
               </div>
             ) : null}
-            <label>
-              打卡地址
-              <input
-                type="text"
-                placeholder="example/path（对应 https://onlatch.com/proxy/ 后的路径）"
-                value={checkinPath}
-                onChange={(e) => setCheckinPath(e.target.value)}
-              />
-            </label>
             <div className="actions">
               <button
                 type="button"

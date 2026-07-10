@@ -52862,13 +52862,14 @@ var auth_default = router;
 // server/routes/api.js
 var import_express2 = __toESM(require_express2(), 1);
 var router2 = (0, import_express2.Router)();
-var ONLATCH_PROXY_BASE = "https://onlatch.com/proxy";
-function sanitizeProxyPath(raw) {
-  return String(raw || "").trim().replace(/^\/+/, "").replace(/\.\./g, "").replace(/\/+/g, "/");
-}
 router2.post("/checkin", requireBearer, (req, res) => {
   const note = typeof req.body?.note === "string" ? req.body.note.slice(0, 200) : null;
   const meta = req.body?.meta && typeof req.body.meta === "object" && !Array.isArray(req.body.meta) ? req.body.meta : null;
+  console.log("[checkin] \u6536\u5230\u6253\u5361", {
+    userId: req.user.id,
+    username: req.user.username,
+    body: req.body
+  });
   const record = addCheckin({
     userId: req.user.id,
     method: "POST",
@@ -52885,62 +52886,6 @@ router2.post("/checkin", requireBearer, (req, res) => {
 });
 router2.get("/checkins", (_req, res) => {
   res.json({ checkins: listCheckins(100) });
-});
-router2.post("/latch-checkin", async (req, res) => {
-  const path4 = sanitizeProxyPath(req.body?.path);
-  const token = String(req.body?.token || "").trim();
-  const method = String(req.body?.method || "POST").toUpperCase();
-  if (!path4 || !token) {
-    return res.status(400).json({
-      error: "missing_fields",
-      message: "\u8BF7\u63D0\u4F9B\u6253\u5361\u5730\u5740\u4E0E Authorization Bearer token"
-    });
-  }
-  const url = `${ONLATCH_PROXY_BASE}/${path4}`;
-  const authorization = `Bearer ${token}`;
-  const tokenPreview = token.length > 16 ? `${token.slice(0, 10)}\u2026${token.slice(-6)}` : token;
-  console.log("[latch-checkin] \u53D1\u8D77\u8BF7\u6C42", {
-    method,
-    url,
-    authorization: `Bearer ${tokenPreview}`
-  });
-  try {
-    const upstream = await fetch(url, {
-      method,
-      headers: { Authorization: authorization }
-    });
-    const text = await upstream.text();
-    let data = text;
-    try {
-      data = JSON.parse(text);
-    } catch {
-    }
-    console.log("[latch-checkin] \u54CD\u5E94", {
-      method,
-      url,
-      status: upstream.status,
-      ok: upstream.ok,
-      bodyPreview: typeof data === "string" ? data.slice(0, 500) : data
-    });
-    return res.status(upstream.ok ? 200 : upstream.status).json({
-      ok: upstream.ok,
-      status: upstream.status,
-      method,
-      url,
-      authorization,
-      data
-    });
-  } catch (error) {
-    console.error("[latch-checkin] \u5931\u8D25", {
-      method,
-      url,
-      message: error instanceof Error ? error.message : String(error)
-    });
-    return res.status(502).json({
-      error: "proxy_failed",
-      message: error instanceof Error ? error.message : "\u6253\u5361\u8BF7\u6C42\u5931\u8D25"
-    });
-  }
 });
 var api_default = router2;
 

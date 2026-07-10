@@ -19,12 +19,10 @@ export function parseCurlInput(text) {
     }
   }
 
-  let path = "";
-  const urlMatch = normalized.match(
-    /https?:\/\/(?:www\.)?onlatch\.com\/proxy\/([^\s'"?#]+)/i,
-  );
-  if (urlMatch?.[1]) {
-    path = decodeURIComponent(urlMatch[1].replace(/\/$/, ""));
+  let url = "";
+  const urlMatch = normalized.match(/https?:\/\/[^\s'"\\]+/i);
+  if (urlMatch?.[0]) {
+    url = urlMatch[0].replace(/['"]/g, "");
   }
 
   let method = "POST";
@@ -33,5 +31,19 @@ export function parseCurlInput(text) {
     method = methodMatch[1].toUpperCase();
   }
 
-  return { bearer, path, method };
+  let body = "{}";
+  const bodyPatterns = [
+    /-d\s+['"]([^'"]*)['"]/i,
+    /--data(?:-raw|-binary)?\s+['"]([^'"]*)['"]/i,
+    /-d\s+(\{[^}]+\})/i,
+  ];
+  for (const pattern of bodyPatterns) {
+    const match = normalized.match(pattern);
+    if (match?.[1] !== undefined) {
+      body = match[1].trim() || "{}";
+      break;
+    }
+  }
+
+  return { bearer, url, method, body };
 }
