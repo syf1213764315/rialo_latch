@@ -23,9 +23,32 @@ async function copyText(text) {
   await navigator.clipboard.writeText(text);
 }
 
+function formatLog(data) {
+  try {
+    return JSON.stringify(data, null, 2);
+  } catch {
+    return String(data);
+  }
+}
+
+function formatTime(iso) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
-  const [checkins, setCheckins] = useState([]);
   const [freshKey, setFreshKey] = useState(null);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
@@ -38,6 +61,8 @@ export default function App() {
   const [checkinBusy, setCheckinBusy] = useState(false);
   const [hasServerKey, setHasServerKey] = useState(false);
   const [showRequestPreview, setShowRequestPreview] = useState(false);
+  const [responseLog, setResponseLog] = useState(null);
+  const [lastSuccess, setLastSuccess] = useState(null);
 
   const refreshMe = useCallback(async () => {
     const data = await api("/api/auth/me");
@@ -54,11 +79,6 @@ export default function App() {
     }
   }, []);
 
-  const refreshCheckins = useCallback(async () => {
-    const data = await api("/api/checkins");
-    setCheckins(data.checkins);
-  }, []);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("auth") === "ok") {
@@ -72,14 +92,13 @@ export default function App() {
     (async () => {
       try {
         await refreshMe();
-        await refreshCheckins();
       } catch (e) {
         setError(e.message);
       } finally {
         setLoading(false);
       }
     })();
-  }, [refreshMe, refreshCheckins]);
+  }, [refreshMe]);
 
   const displayName = useMemo(() => {
     if (!user) return "";
@@ -153,12 +172,6 @@ export default function App() {
       return;
     }
     applyParsedCurl(parsed);
-    console.log("[打卡] 解析 curl", {
-      method: parsed.method,
-      url: parsed.url,
-      authorization: `Bearer ${parsed.bearer}`,
-      body: parsed.body,
-    });
     setMessage("已解析打卡地址、Authorization 与 Body");
   };
 
@@ -194,40 +207,64 @@ export default function App() {
       body = enrichCheckinBody(body, user?.discordId);
     }
 
-    const preview = {
+    const request = {
       method,
       url,
       authorization: `Bearer ${token}`,
       body,
     };
-    console.log("[打卡] 发起请求", preview);
 
     setCheckinBusy(true);
     try {
-      const data = await api("/api/latch-checkin", {
+      const res = await fetch("/api/latch-checkin", {
         method: "POST",
-        body: JSON.stringify({
-          url,
-          token,
-          method,
-          body,
-        }),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, token, method, body }),
       });
-      console.log("[打卡] 响应", { status: data.status, ok: data.ok, data: data.data });
-      if (!data.ok) {
+      const data = await res.json().catch(() => ({}));
+
+      setResponseLog({
+        time: new Date().toISOString(),
+        request,
+        status: data.status ?? res.status,
+        ok: data.ok ?? res.ok,
+        response: data,
+      });
+
+      if (!res.ok || !data.ok) {
         throw new Error(
           (typeof data.data === "object" && data.data?.message) ||
             data.data?.error ||
-            `HTTP ${data.status}`,
+            data.message ||
+            data.error ||
+            `HTTP ${data.status ?? res.status}`,
         );
       }
-      setMessage(
-        (typeof data.data === "object" && data.data?.message) || "打卡成功",
-      );
-      await refreshCheckins();
+
+      const payload = data.data || {};
+      const checkinRecord = payload.checkin || {};
+      const time = checkinRecord.createdAt || new Date().toISOString();
+
+      setLastSuccess({
+        avatar: user?.avatar || "https://cdn.discordapp.com/embed/avatars/0.png",
+        name: user ? (user.globalName || user.username) : "用户",
+        username: user?.username || "",
+        time,
+      });
+
+      setMessage(payload.message || "打卡成功");
     } catch (e) {
-      console.error("[打卡] 失败", e);
       setError(e.message);
+      setResponseLog((prev) =>
+        prev
+          ? { ...prev, error: e.message }
+          : {
+              time: new Date().toISOString(),
+              request,
+              error: e.message,
+            },
+      );
     } finally {
       setCheckinBusy(false);
     }
@@ -243,6 +280,8 @@ export default function App() {
     setRequestBody("{}");
     setShowRequestPreview(false);
     setHasServerKey(false);
+    setResponseLog(null);
+    setLastSuccess(null);
     setMessage("已退出登录");
   };
 
@@ -294,82 +333,84 @@ export default function App() {
       {message ? <p className="flash">{message}</p> : null}
       {error ? <p className="flash error">{error}</p> : null}
 
-      <div className="split-layout">
-        <aside className="split-left">
-          <section className="card">
-            <h2>Discord 登录</h2>
-            {user ? (
-              <div className="user-row">
-                <img className="avatar" src={user.avatar} alt={displayName} />
-                <div>
-                  <div style={{ fontWeight: 600 }}>{displayName}</div>
-                  <div className="muted mono">@{user.username}</div>
-                  <div className="actions" style={{ marginTop: "0.75rem" }}>
-                    <button type="button" className="btn danger" onClick={logout}>
-                      退出登录
-                    </button>
+      <div className="dashboard">
+        <section className="card account-card">
+          <div className="account-grid">
+            <div className="account-block">
+              <h2>Discord 登录</h2>
+              {user ? (
+                <div className="user-row compact">
+                  <img className="avatar sm" src={user.avatar} alt={displayName} />
+                  <div className="user-info">
+                    <div className="user-name">{displayName}</div>
+                    <div className="muted mono">@{user.username}</div>
                   </div>
+                  <button type="button" className="btn danger sm" onClick={logout}>
+                    退出
+                  </button>
                 </div>
-              </div>
-            ) : (
-              <>
-                <p className="muted">登录后可申请 API Key，调用打卡接口时使用 Bearer Token。</p>
-                <a className="btn primary" href="/api/auth/discord">
-                  使用 Discord 登录
-                </a>
-              </>
-            )}
-          </section>
+              ) : (
+                <div className="account-actions">
+                  <p className="muted compact-text">登录后可申请 API Key</p>
+                  <a className="btn primary sm" href="/api/auth/discord">
+                    Discord 登录
+                  </a>
+                </div>
+              )}
+            </div>
 
-          <section className="card">
-            <h2>API Key</h2>
-            {!user ? (
-                <p className="muted">
-                  登录后可生成 Key（永久有效）。请求头：
-                  <code>Authorization: Bearer &lt;api_key&gt;</code>
+            <div className="account-divider" />
+
+            <div className="account-block">
+              <h2>API Key</h2>
+              {!user ? (
+                <p className="muted compact-text">
+                  登录后生成 Key，请求头 <code>Authorization: Bearer &lt;key&gt;</code>
                 </p>
-            ) : (
-              <>
-                <div className="actions">
-                  {!freshKey ? (
-                    <button type="button" className="btn primary" onClick={() => createKey(false)}>
-                      {hasServerKey ? "加载已保存 Key" : "生成 API Key"}
-                    </button>
-                  ) : null}
-                  {hasServerKey ? (
-                    <button type="button" className="btn" onClick={() => createKey(true)}>
-                      重新生成
-                    </button>
-                  ) : null}
-                </div>
-                {freshKey ? (
-                  <div className="key-banner">
-                    <div className="mono key-text">{freshKey}</div>
-                    <button type="button" className="btn primary" onClick={handleCopyKey}>
-                      复制全部
-                    </button>
+              ) : (
+                <>
+                  <div className="actions">
+                    {!freshKey ? (
+                      <button type="button" className="btn primary sm" onClick={() => createKey(false)}>
+                        {hasServerKey ? "加载 Key" : "生成 Key"}
+                      </button>
+                    ) : null}
+                    {hasServerKey ? (
+                      <button type="button" className="btn sm" onClick={() => createKey(true)}>
+                        重新生成
+                      </button>
+                    ) : null}
+                    {freshKey ? (
+                      <button type="button" className="btn sm" onClick={handleCopyKey}>
+                        复制
+                      </button>
+                    ) : null}
                   </div>
-                ) : (
-                  <p className="empty">
-                    {hasServerKey
-                      ? "本机未找到已保存 Key，可点击加载或重新生成"
-                      : "点击上方按钮生成 Key（永久有效，本机会记住）"}
-                  </p>
-                )}
-              </>
-            )}
-          </section>
+                  {freshKey ? (
+                    <div className="key-inline mono">{freshKey}</div>
+                  ) : (
+                    <p className="empty compact-text">
+                      {hasServerKey ? "本机未找到 Key" : "点击生成 Key（永久有效）"}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </section>
 
-          <section className="card">
+        <section className="card checkin-card">
+          <div className="checkin-head">
             <h2>打卡</h2>
-            <p className="muted">
-              粘贴 curl 命令，解析后通过本站代理请求 onlatch（避免跨域）。
-            </p>
-            <label>
+            <p className="muted compact-text">粘贴 curl → 解析 → 打卡</p>
+          </div>
+          <div className="checkin-row">
+            <label className="checkin-label">
               curl 命令
               <textarea
-                rows={5}
-                placeholder={`curl https://onlatch.com/proxy/example/path \\\n  -H "Authorization: Bearer lat_..."\n解析后请求：https://onlatch.com/proxy/api/checkin`}
+                className="curl-input"
+                rows={3}
+                placeholder={`curl https://onlatch.com/proxy/example/path -H "Authorization: Bearer lat_..."`}
                 value={curlInput}
                 onChange={(e) => {
                   setCurlInput(e.target.value);
@@ -377,76 +418,99 @@ export default function App() {
                 }}
               />
             </label>
-            <div className="actions">
-              <button type="button" className="btn" onClick={handleParseCurl}>
-                解析
-              </button>
+            <div className="checkin-side">
+              <div className="actions">
+                <button type="button" className="btn sm" onClick={handleParseCurl}>
+                  解析
+                </button>
+                <button
+                  type="button"
+                  className="btn primary sm"
+                  onClick={handleCheckin}
+                  disabled={checkinBusy}
+                >
+                  {checkinBusy ? "打卡中…" : "打卡"}
+                </button>
+              </div>
+              {requestPreview ? (
+                <div className="request-preview compact">
+                  <div className="request-preview-title">请求预览</div>
+                  <div className="mono request-line">
+                    <span className={`method ${requestPreview.method.toLowerCase()}`}>
+                      {requestPreview.method}
+                    </span>{" "}
+                    {requestPreview.url}
+                  </div>
+                  <div className="mono request-line">Authorization: {requestPreview.authorization}</div>
+                  {requestPreview.method !== "GET" && requestPreview.method !== "HEAD" ? (
+                    <div className="mono request-line">Body: {requestPreview.body}</div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="muted compact-text">解析后显示请求预览</p>
+              )}
             </div>
-            {requestPreview ? (
-              <div className="request-preview">
-                <div className="request-preview-title">请求预览</div>
-                <div className="mono request-line">
-                  <span className={`method ${requestPreview.method.toLowerCase()}`}>
-                    {requestPreview.method}
-                  </span>{" "}
-                  {requestPreview.url}
+          </div>
+        </section>
+
+        <section className="card wall-card">
+          <div className="wall-grid">
+            <div className="wall-panel">
+              <div className="panel-head">
+                <h2>打卡墙</h2>
+              </div>
+              {lastSuccess ? (
+                <div className="success-card">
+                  <div className="success-badge">打卡成功</div>
+                  <img
+                    className="success-avatar"
+                    src={lastSuccess.avatar}
+                    alt={lastSuccess.name}
+                  />
+                  <div className="success-name">{lastSuccess.name}</div>
+                  {lastSuccess.username ? (
+                    <div className="success-username mono">@{lastSuccess.username}</div>
+                  ) : null}
+                  <div className="success-time mono">{formatTime(lastSuccess.time)}</div>
+                  <p className="success-hint">
+                    可返回{" "}
+                    <a href="https://onlatch.com/" target="_blank" rel="noreferrer">
+                      Latch
+                    </a>{" "}
+                    查看请求状态
+                  </p>
                 </div>
-                <div className="mono request-line">
-                  Authorization: {requestPreview.authorization}
+              ) : (
+                <div className="wall-empty">
+                  <div className="wall-empty-icon">◎</div>
+                  <p>完成打卡后，这里会显示你的打卡成功信息</p>
                 </div>
-                <div className="mono request-line">
-                  Origin: {requestPreview.origin || "(服务端使用 APP_URL)"}
-                </div>
-                {requestPreview.method !== "GET" && requestPreview.method !== "HEAD" ? (
-                  <div className="mono request-line">Body: {requestPreview.body}</div>
+              )}
+            </div>
+
+            <div className="wall-panel">
+              <div className="panel-head">
+                <h2>响应日志</h2>
+                {responseLog ? (
+                  <button
+                    type="button"
+                    className="btn sm"
+                    onClick={() => copyText(formatLog(responseLog))}
+                  >
+                    复制
+                  </button>
                 ) : null}
               </div>
-            ) : null}
-            <div className="actions">
-              <button
-                type="button"
-                className="btn primary"
-                onClick={handleCheckin}
-                disabled={checkinBusy}
-              >
-                {checkinBusy ? "打卡中…" : "打卡"}
-              </button>
-            </div>
-          </section>
-        </aside>
-
-        <main className="split-right card">
-          <div className="actions" style={{ justifyContent: "space-between", marginBottom: "0.75rem" }}>
-            <h2 style={{ margin: 0 }}>打卡墙</h2>
-            <button type="button" className="btn" onClick={refreshCheckins}>
-              刷新
-            </button>
-          </div>
-          <p className="muted">公开可见。调用打卡接口后记录会出现在这里。</p>
-          {checkins.length === 0 ? (
-            <p className="empty">暂无打卡记录</p>
-          ) : (
-            <div className="checkin-list">
-              {checkins.map((c) => (
-                <div key={c.id} className="checkin-item">
-                  <img src={c.avatar} alt={c.username} />
-                  <div>
-                    <div style={{ fontWeight: 600 }}>
-                      {c.globalName || c.username}{" "}
-                      <span className="muted mono">@{c.username}</span>
-                    </div>
-                    <div className="checkin-meta">
-                      <span className={`method ${c.method.toLowerCase()}`}>{c.method}</span>{" "}
-                      <span className="mono">{c.endpoint}</span>
-                    </div>
-                    {c.note ? <div style={{ marginTop: "0.35rem" }}>{c.note}</div> : null}
-                  </div>
-                  <div className="checkin-meta mono">{c.createdAt}</div>
+              {responseLog ? (
+                <pre className="response-log mono">{formatLog(responseLog)}</pre>
+              ) : (
+                <div className="wall-empty small">
+                  <p>打卡后显示请求与响应日志</p>
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </main>
+          </div>
+        </section>
       </div>
     </div>
   );
