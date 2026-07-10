@@ -168,20 +168,26 @@ export default function App() {
 
     setCheckinBusy(true);
     try {
-      const res = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: method === "GET" || method === "HEAD" ? undefined : body,
+      const data = await api("/api/latch-checkin", {
+        method: "POST",
+        body: JSON.stringify({
+          url,
+          token,
+          method,
+          body,
+        }),
       });
-      const data = await res.json().catch(() => ({}));
-      console.log("[打卡] 响应", { status: res.status, ok: res.ok, data });
-      if (!res.ok) {
-        throw new Error(data.message || data.error || `HTTP ${res.status}`);
+      console.log("[打卡] 响应", { status: data.status, ok: data.ok, data: data.data });
+      if (!data.ok) {
+        throw new Error(
+          (typeof data.data === "object" && data.data?.message) ||
+            data.data?.error ||
+            `HTTP ${data.status}`,
+        );
       }
-      setMessage(data.message || "打卡成功");
+      setMessage(
+        (typeof data.data === "object" && data.data?.message) || "打卡成功",
+      );
       await refreshCheckins();
     } catch (e) {
       console.error("[打卡] 失败", e);
@@ -304,7 +310,7 @@ export default function App() {
           <section className="card">
             <h2>打卡</h2>
             <p className="muted">
-              粘贴 curl 命令，解析出打卡地址、Authorization 与 Body，点击打卡直接请求。
+              粘贴 curl 命令，解析后通过本站代理请求 onlatch（避免跨域）。
             </p>
             <label>
               curl 命令

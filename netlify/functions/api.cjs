@@ -52887,6 +52887,77 @@ router2.post("/checkin", requireBearer, (req, res) => {
 router2.get("/checkins", (_req, res) => {
   res.json({ checkins: listCheckins(100) });
 });
+router2.post("/latch-checkin", async (req, res) => {
+  const url = String(req.body?.url || "").trim();
+  const token = String(req.body?.token || "").trim();
+  const method = String(req.body?.method || "POST").toUpperCase();
+  const body = req.body?.body !== void 0 ? String(req.body.body) : "{}";
+  if (!url || !token) {
+    return res.status(400).json({
+      error: "missing_fields",
+      message: "\u8BF7\u63D0\u4F9B\u6253\u5361\u5730\u5740\u4E0E Authorization Bearer token"
+    });
+  }
+  if (!/^https:\/\/(?:www\.)?onlatch\.com\/proxy\//i.test(url)) {
+    return res.status(400).json({
+      error: "invalid_url",
+      message: "\u4EC5\u652F\u6301 https://onlatch.com/proxy/ \u5730\u5740"
+    });
+  }
+  const authorization = `Bearer ${token}`;
+  const tokenPreview = token.length > 16 ? `${token.slice(0, 10)}\u2026${token.slice(-6)}` : token;
+  const fetchOptions = {
+    method,
+    headers: {
+      Authorization: authorization,
+      "Content-Type": "application/json"
+    }
+  };
+  if (method !== "GET" && method !== "HEAD") {
+    fetchOptions.body = body;
+  }
+  console.log("[latch-checkin] \u53D1\u8D77\u8BF7\u6C42", {
+    method,
+    url,
+    body: method === "GET" || method === "HEAD" ? void 0 : body,
+    authorization: `Bearer ${tokenPreview}`
+  });
+  try {
+    const upstream = await fetch(url, fetchOptions);
+    const text = await upstream.text();
+    let data = text;
+    try {
+      data = JSON.parse(text);
+    } catch {
+    }
+    console.log("[latch-checkin] \u54CD\u5E94", {
+      method,
+      url,
+      status: upstream.status,
+      ok: upstream.ok,
+      bodyPreview: typeof data === "string" ? data.slice(0, 500) : data
+    });
+    return res.status(upstream.ok ? 200 : upstream.status).json({
+      ok: upstream.ok,
+      status: upstream.status,
+      method,
+      url,
+      authorization,
+      body: method === "GET" || method === "HEAD" ? void 0 : body,
+      data
+    });
+  } catch (error) {
+    console.error("[latch-checkin] \u5931\u8D25", {
+      method,
+      url,
+      message: error instanceof Error ? error.message : String(error)
+    });
+    return res.status(502).json({
+      error: "proxy_failed",
+      message: error instanceof Error ? error.message : "\u6253\u5361\u8BF7\u6C42\u5931\u8D25"
+    });
+  }
+});
 var api_default = router2;
 
 // server/app.js
