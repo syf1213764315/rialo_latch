@@ -26,12 +26,23 @@ function discordConfig() {
   return { clientId, clientSecret, redirectUri };
 }
 
-function appBaseUrl() {
+function appBaseUrl(req) {
+  // 优先使用请求本身的来源，避免 APP_URL 配置成 localhost 时登录后跳回 localhost。
+  if (req) {
+    const forwardedHost = req.headers["x-forwarded-host"];
+    const host = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) || req.headers.host;
+    if (host && !/^localhost|127\.0\.0\.1/.test(host)) {
+      const proto =
+        (req.headers["x-forwarded-proto"] || "").toString().split(",")[0] ||
+        (req.secure ? "https" : "http");
+      return `${proto}://${host}`;
+    }
+  }
   return process.env.APP_URL || "http://localhost:8787";
 }
 
 async function finishDiscordLogin(req, res, redirectUriUsed) {
-  const appUrl = appBaseUrl();
+  const appUrl = appBaseUrl(req);
   const { code, error, error_description: errorDescription } = req.query;
 
   if (error) {
@@ -124,7 +135,7 @@ router.get("/discord/callback", async (req, res) => {
     const msg = error instanceof Error ? error.message : "callback_failed";
     console.error("[discord] callback unhandled:", msg, error?.cause || "");
     res.redirect(
-      `${appBaseUrl()}/?auth=error&message=${encodeURIComponent(msg)}`,
+      `${appBaseUrl(req)}/?auth=error&message=${encodeURIComponent(msg)}`,
     );
   }
 });
@@ -172,7 +183,7 @@ router.get("/discord/diag", async (_req, res) => {
     config: {
       clientId,
       redirectUri,
-      appUrl: appBaseUrl(),
+      appUrl: appBaseUrl(_req),
       proxy,
     },
     discordApi: {
@@ -233,12 +244,12 @@ router.delete("/keys/:id", requireSession, (req, res) => {
 router.get("/callback-info", async (req, res) => {
   if (typeof req.query.code === "string" || typeof req.query.error === "string") {
     try {
-      const mistakenRedirect = `${appBaseUrl()}/api/auth/callback-info`;
+      const mistakenRedirect = `${appBaseUrl(req)}/api/auth/callback-info`;
       await finishDiscordLogin(req, res, mistakenRedirect);
       return;
     } catch (error) {
       return res.redirect(
-        `${appBaseUrl()}/?auth=error&message=${encodeURIComponent(
+        `${appBaseUrl(req)}/?auth=error&message=${encodeURIComponent(
           error instanceof Error ? error.message : "callback_failed",
         )}`,
       );

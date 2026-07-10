@@ -10,6 +10,7 @@
     "dev:all": "concurrently \"npm run dev\" \"vite\""
   },
   "dependencies": {
+    "@netlify/blobs": "^10.7.9",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",

@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import initSqlJs from "sql.js";
-import { getDataDir } from "./paths.js";
+import { getDataDir, isServerless } from "./paths.js";
+import { readDbBlob, writeDbBlob } from "./blobStore.js";
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS users (
@@ -58,71 +59,83 @@ function resolveWasmPath(file) {
   return path.join(process.cwd(), "node_modules/sql.js/dist", name);
 }
 
-function createAdapter(sqlDb, dbPath) {
-  const persist = () => {
-    const dir = path.dirname(dbPath);
-    fs.mkdirSync(dir, { recursive: true });
-    const data = sqlDb.export();
-    fs.writeFileSync(dbPath, Buffer.from(data));
-  };
+const state = {
+  SQL: null,
+  sqlDb: null,
+  dbPath: null,
+  dirty: false,
+};
 
-  return {
-    prepare(sql) {
-      return {
-        run(...params) {
-          sqlDb.run(sql, params);
-          persist();
-          return { changes: sqlDb.getRowsModified() };
-        },
-        get(...params) {
-          const stmt = sqlDb.prepare(sql);
-          try {
-            if (params.length) stmt.bind(params);
-            return stmt.step() ? stmt.getAsObject() : undefined;
-          } finally {
-            stmt.free();
-          }
-        },
-        all(...params) {
-          const stmt = sqlDb.prepare(sql);
-          const rows = [];
-          try {
-            if (params.length) stmt.bind(params);
-            while (stmt.step()) rows.push(stmt.getAsObject());
-            return rows;
-          } finally {
-            stmt.free();
-          }
-        },
-      };
-    },
-    exec(sql) {
-      sqlDb.run(sql);
-      persist();
-    },
-  };
+function applySchema() {
+  state.sqlDb.run("PRAGMA foreign_keys = ON;");
+  state.sqlDb.run(SCHEMA);
 }
+
+function persist() {
+  state.dirty = true;
+  try {
+    fs.mkdirSync(path.dirname(state.dbPath), { recursive: true });
+    fs.writeFileSync(state.dbPath, Buffer.from(state.sqlDb.export()));
+  } catch (error) {
+    console.error("[db] local persist failed:", error?.message || error);
+  }
+}
+
+const adapter = {
+  prepare(sql) {
+    return {
+      run(...params) {
+        state.sqlDb.run(sql, params);
+        persist();
+        return { changes: state.sqlDb.getRowsModified() };
+      },
+      get(...params) {
+        const stmt = state.sqlDb.prepare(sql);
+        try {
+          if (params.length) stmt.bind(params);
+          return stmt.step() ? stmt.getAsObject() : undefined;
+        } finally {
+          stmt.free();
+        }
+      },
+      all(...params) {
+        const stmt = state.sqlDb.prepare(sql);
+        const rows = [];
+        try {
+          if (params.length) stmt.bind(params);
+          while (stmt.step()) rows.push(stmt.getAsObject());
+          return rows;
+        } finally {
+          stmt.free();
+        }
+      },
+    };
+  },
+  exec(sql) {
+    state.sqlDb.run(sql);
+    persist();
+  },
+};
 
 async function initDatabase() {
   const dataDir = getDataDir();
   fs.mkdirSync(dataDir, { recursive: true });
-  const dbPath = path.join(dataDir, "rialo.db");
+  state.dbPath = path.join(dataDir, "rialo.db");
 
-  const SQL = await initSqlJs({
+  state.SQL = await initSqlJs({
     locateFile: (file) => resolveWasmPath(file),
   });
-  let sqlDb;
 
-  if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath);
-    sqlDb = new SQL.Database(fileBuffer);
-  } else {
-    sqlDb = new SQL.Database();
+  let bytes = null;
+  if (isServerless()) {
+    bytes = await readDbBlob();
+  }
+  if (!bytes && fs.existsSync(state.dbPath)) {
+    bytes = fs.readFileSync(state.dbPath);
   }
 
-  const adapter = createAdapter(sqlDb, dbPath);
-  adapter.exec("PRAGMA foreign_keys = ON;");
-  adapter.exec(SCHEMA);
+  state.sqlDb = bytes ? new state.SQL.Database(bytes) : new state.SQL.Database();
+  applySchema();
   return adapter;
 }
 
@@ -140,6 +153,32 @@ export function getDb() {
     throw new Error("Database not initialized");
   }
   return dbInstance;
+}
+
+/** 从 Netlify Blobs 拉取最新 DB（每个请求开始时调用，保证跨实例一致）。 */
+export async function reloadFromBlob() {
+  if (!isServerless() || !state.SQL) return;
+  const bytes = await readDbBlob();
+  if (bytes) {
+    try {
+      state.sqlDb = new state.SQL.Database(bytes);
+      applySchema();
+      state.dirty = false;
+    } catch (error) {
+      console.error("[db] reload failed:", error?.message || error);
+    }
+  }
+}
+
+/** 将本次改动写回 Netlify Blobs（请求结束前调用）。 */
+export async function flushToBlob() {
+  if (!isServerless() || !state.dirty || !state.sqlDb) return;
+  try {
+    await writeDbBlob(Buffer.from(state.sqlDb.export()));
+    state.dirty = false;
+  } catch (error) {
+    console.error("[db] flush failed:", error?.message || error);
+  }
 }
 
 const db = new Proxy(

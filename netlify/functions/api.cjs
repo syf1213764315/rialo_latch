@@ -2945,6 +2945,982 @@ var require_sql_wasm = __commonJS({
   }
 });
 
+// node_modules/@netlify/runtime-utils/dist/main.cjs
+var require_main = __commonJS({
+  "node_modules/@netlify/runtime-utils/dist/main.cjs"(exports2, module2) {
+    "use strict";
+    var __defProp2 = Object.defineProperty;
+    var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
+    var __getOwnPropNames2 = Object.getOwnPropertyNames;
+    var __hasOwnProp2 = Object.prototype.hasOwnProperty;
+    var __export2 = (target, all) => {
+      for (var name in all)
+        __defProp2(target, name, { get: all[name], enumerable: true });
+    };
+    var __copyProps2 = (to, from, except, desc) => {
+      if (from && typeof from === "object" || typeof from === "function") {
+        for (let key of __getOwnPropNames2(from))
+          if (!__hasOwnProp2.call(to, key) && key !== except)
+            __defProp2(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc2(from, key)) || desc.enumerable });
+      }
+      return to;
+    };
+    var __toCommonJS2 = (mod) => __copyProps2(__defProp2({}, "__esModule", { value: true }), mod);
+    var main_exports = {};
+    __export2(main_exports, {
+      base64Decode: () => base64Decode,
+      base64Encode: () => base64Encode,
+      getEnvironment: () => getEnvironment
+    });
+    module2.exports = __toCommonJS2(main_exports);
+    var getString = (input) => typeof input === "string" ? input : JSON.stringify(input);
+    var base64Decode = globalThis.Buffer ? (input) => Buffer.from(input, "base64").toString() : (input) => atob(input);
+    var base64Encode = globalThis.Buffer ? (input) => Buffer.from(getString(input)).toString("base64") : (input) => btoa(getString(input));
+    var getEnvironment = () => {
+      const { Deno, Netlify, process: process2 } = globalThis;
+      return Netlify?.env ?? Deno?.env ?? {
+        delete: (key) => delete process2?.env[key],
+        get: (key) => process2?.env[key],
+        has: (key) => Boolean(process2?.env[key]),
+        set: (key, value) => {
+          if (process2?.env) {
+            process2.env[key] = value;
+          }
+        },
+        toObject: () => process2?.env ?? {}
+      };
+    };
+  }
+});
+
+// node_modules/@netlify/otel/dist/main.cjs
+var require_main2 = __commonJS({
+  "node_modules/@netlify/otel/dist/main.cjs"(exports2, module2) {
+    "use strict";
+    var __defProp2 = Object.defineProperty;
+    var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
+    var __getOwnPropNames2 = Object.getOwnPropertyNames;
+    var __hasOwnProp2 = Object.prototype.hasOwnProperty;
+    var __export2 = (target, all) => {
+      for (var name in all)
+        __defProp2(target, name, { get: all[name], enumerable: true });
+    };
+    var __copyProps2 = (to, from, except, desc) => {
+      if (from && typeof from === "object" || typeof from === "function") {
+        for (let key of __getOwnPropNames2(from))
+          if (!__hasOwnProp2.call(to, key) && key !== except)
+            __defProp2(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc2(from, key)) || desc.enumerable });
+      }
+      return to;
+    };
+    var __toCommonJS2 = (mod) => __copyProps2(__defProp2({}, "__esModule", { value: true }), mod);
+    var main_exports = {};
+    __export2(main_exports, {
+      getTracer: () => getTracer,
+      shutdownTracers: () => shutdownTracers,
+      withActiveSpan: () => withActiveSpan
+    });
+    module2.exports = __toCommonJS2(main_exports);
+    var GET_TRACER = "__netlify__getTracer";
+    var SHUTDOWN_TRACERS = "__netlify__shutdownTracers";
+    var getTracer = (name, version) => {
+      return globalThis[GET_TRACER]?.(name, version);
+    };
+    var shutdownTracers = async () => {
+      return globalThis[SHUTDOWN_TRACERS]?.();
+    };
+    function withActiveSpan(tracer, name, optionsOrFn, contextOrFn, fn) {
+      const func = typeof contextOrFn === "function" ? contextOrFn : typeof optionsOrFn === "function" ? optionsOrFn : fn;
+      if (!func) {
+        throw new Error("function to execute with active span is missing");
+      }
+      if (!tracer) {
+        return func();
+      }
+      return tracer.withActiveSpan(name, optionsOrFn, contextOrFn, func);
+    }
+  }
+});
+
+// node_modules/@netlify/blobs/dist/main.cjs
+var require_main3 = __commonJS({
+  "node_modules/@netlify/blobs/dist/main.cjs"(exports2, module2) {
+    "use strict";
+    var __create2 = Object.create;
+    var __defProp2 = Object.defineProperty;
+    var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
+    var __getOwnPropNames2 = Object.getOwnPropertyNames;
+    var __getProtoOf2 = Object.getPrototypeOf;
+    var __hasOwnProp2 = Object.prototype.hasOwnProperty;
+    var __export2 = (target, all) => {
+      for (var name in all)
+        __defProp2(target, name, { get: all[name], enumerable: true });
+    };
+    var __copyProps2 = (to, from, except, desc) => {
+      if (from && typeof from === "object" || typeof from === "function") {
+        for (let key of __getOwnPropNames2(from))
+          if (!__hasOwnProp2.call(to, key) && key !== except)
+            __defProp2(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc2(from, key)) || desc.enumerable });
+      }
+      return to;
+    };
+    var __toESM2 = (mod, isNodeMode, target) => (target = mod != null ? __create2(__getProtoOf2(mod)) : {}, __copyProps2(
+      // If the importer is in node compatibility mode or this is not an ESM
+      // file that has been converted to a CommonJS file using a Babel-
+      // compatible transform (i.e. "__esModule" has not been set), then set
+      // "default" to the CommonJS "module.exports" for node compatibility.
+      isNodeMode || !mod || !mod.__esModule ? __defProp2(target, "default", { value: mod, enumerable: true }) : target,
+      mod
+    ));
+    var __toCommonJS2 = (mod) => __copyProps2(__defProp2({}, "__esModule", { value: true }), mod);
+    var main_exports = {};
+    __export2(main_exports, {
+      connectLambda: () => connectLambda,
+      getDeployStore: () => getDeployStore,
+      getStore: () => getStore,
+      listStores: () => listStores,
+      setEnvironmentContext: () => setEnvironmentContext
+    });
+    module2.exports = __toCommonJS2(main_exports);
+    var import_runtime_utils = require_main();
+    var getEnvironmentContext = () => {
+      const context = globalThis.netlifyBlobsContext || (0, import_runtime_utils.getEnvironment)().get("NETLIFY_BLOBS_CONTEXT");
+      if (typeof context !== "string" || !context) {
+        return {};
+      }
+      const data = (0, import_runtime_utils.base64Decode)(context);
+      try {
+        return JSON.parse(data);
+      } catch {
+      }
+      return {};
+    };
+    var setEnvironmentContext = (context) => {
+      const encodedContext = (0, import_runtime_utils.base64Encode)(JSON.stringify(context));
+      (0, import_runtime_utils.getEnvironment)().set("NETLIFY_BLOBS_CONTEXT", encodedContext);
+    };
+    var MissingBlobsEnvironmentError = class extends Error {
+      constructor(requiredProperties) {
+        super(
+          `The environment has not been configured to use Netlify Blobs. To use it manually, supply the following properties when creating a store: ${requiredProperties.join(
+            ", "
+          )}`
+        );
+        this.name = "MissingBlobsEnvironmentError";
+      }
+    };
+    var import_runtime_utils2 = require_main();
+    var connectLambda = (event) => {
+      const rawData = (0, import_runtime_utils2.base64Decode)(event.blobs);
+      const data = JSON.parse(rawData);
+      const environmentContext = {
+        deployID: event.headers["x-nf-deploy-id"],
+        edgeURL: data.url,
+        siteID: event.headers["x-nf-site-id"],
+        token: data.token
+      };
+      setEnvironmentContext(environmentContext);
+    };
+    var BlobsConsistencyError = class extends Error {
+      constructor() {
+        super(
+          `Netlify Blobs has failed to perform a read using strong consistency because the environment has not been configured with a 'uncachedEdgeURL' property`
+        );
+        this.name = "BlobsConsistencyError";
+      }
+    };
+    var import_runtime_utils3 = require_main();
+    var BASE64_PREFIX = "b64;";
+    var METADATA_HEADER_INTERNAL = "x-amz-meta-user";
+    var METADATA_HEADER_EXTERNAL = "netlify-blobs-metadata";
+    var METADATA_MAX_SIZE = 2 * 1024;
+    var encodeMetadata = (metadata) => {
+      if (!metadata) {
+        return null;
+      }
+      const encodedObject = (0, import_runtime_utils3.base64Encode)(JSON.stringify(metadata));
+      const payload = `b64;${encodedObject}`;
+      if (METADATA_HEADER_EXTERNAL.length + payload.length > METADATA_MAX_SIZE) {
+        throw new Error("Metadata object exceeds the maximum size");
+      }
+      return payload;
+    };
+    var decodeMetadata = (header) => {
+      if (!header?.startsWith(BASE64_PREFIX)) {
+        return {};
+      }
+      const encodedData = header.slice(BASE64_PREFIX.length);
+      const decodedData = (0, import_runtime_utils3.base64Decode)(encodedData);
+      const metadata = JSON.parse(decodedData);
+      return metadata;
+    };
+    var getMetadataFromResponse = (response) => {
+      if (!response.headers) {
+        return {};
+      }
+      const value = response.headers.get(METADATA_HEADER_EXTERNAL) || response.headers.get(METADATA_HEADER_INTERNAL);
+      try {
+        return decodeMetadata(value);
+      } catch {
+        throw new Error(
+          "An internal error occurred while trying to retrieve the metadata for an entry. Please try updating to the latest version of the Netlify Blobs client."
+        );
+      }
+    };
+    var REGION_AUTO = "auto";
+    var regions = {
+      "us-east-1": true,
+      "us-east-2": true,
+      "eu-central-1": true,
+      "ap-southeast-1": true,
+      "ap-southeast-2": true
+    };
+    var isValidRegion = (input) => Object.keys(regions).includes(input);
+    var InvalidBlobsRegionError = class extends Error {
+      constructor(region) {
+        super(
+          `${region} is not a supported Netlify Blobs region. Supported values are: ${Object.keys(regions).join(", ")}.`
+        );
+        this.name = "InvalidBlobsRegionError";
+      }
+    };
+    var import_runtime_utils4 = require_main();
+    var DEFAULT_RETRY_DELAY = (0, import_runtime_utils4.getEnvironment)().get("NODE_ENV") === "test" ? 1 : 5e3;
+    var MIN_RETRY_DELAY = 1e3;
+    var MAX_RETRY = 5;
+    var RATE_LIMIT_HEADER = "X-RateLimit-Reset";
+    var fetchAndRetry = async (fetch2, url, options, attemptsLeft = MAX_RETRY) => {
+      try {
+        const res = await fetch2(url, options);
+        if (attemptsLeft > 0 && (res.status === 429 || res.status >= 500)) {
+          const delay = getDelay(res.headers.get(RATE_LIMIT_HEADER));
+          await sleep(delay);
+          return fetchAndRetry(fetch2, url, options, attemptsLeft - 1);
+        }
+        return res;
+      } catch (error) {
+        if (attemptsLeft === 0) {
+          throw error;
+        }
+        const delay = getDelay();
+        await sleep(delay);
+        return fetchAndRetry(fetch2, url, options, attemptsLeft - 1);
+      }
+    };
+    var getDelay = (rateLimitReset) => {
+      if (!rateLimitReset) {
+        return DEFAULT_RETRY_DELAY;
+      }
+      return Math.max(Number(rateLimitReset) * 1e3 - Date.now(), MIN_RETRY_DELAY);
+    };
+    var sleep = (ms) => new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+    var import_node_process = __toESM2(require("process"), 1);
+    var import_otel = require_main2();
+    var NF_ERROR = "x-nf-error";
+    var NF_REQUEST_ID = "x-nf-request-id";
+    var BlobsInternalError = class extends Error {
+      constructor(res) {
+        let details = res.headers.get(NF_ERROR) || `${res.status} status code`;
+        if (res.headers.has(NF_REQUEST_ID)) {
+          details += `, ID: ${res.headers.get(NF_REQUEST_ID)}`;
+        }
+        super(`Netlify Blobs has generated an internal error (${details})`);
+        this.name = "BlobsInternalError";
+      }
+    };
+    var collectIterator = async (iterator) => {
+      const result = [];
+      for await (const item of iterator) {
+        result.push(item);
+      }
+      return result;
+    };
+    function withSpan(span, name, fn) {
+      if (span) return fn(span);
+      return (0, import_otel.withActiveSpan)((0, import_otel.getTracer)(), name, (span2) => {
+        return fn(span2);
+      });
+    }
+    var SIGNED_URL_ACCEPT_HEADER = "application/json;type=signed-url";
+    var Client = class {
+      constructor({ apiURL, consistency, edgeURL, fetch: fetch2, region, siteID, token, uncachedEdgeURL }) {
+        this.apiURL = apiURL;
+        this.consistency = consistency ?? "eventual";
+        this.edgeURL = edgeURL;
+        this.fetch = fetch2 ?? globalThis.fetch;
+        this.region = region;
+        this.siteID = siteID;
+        this.token = token;
+        this.uncachedEdgeURL = uncachedEdgeURL;
+        if (!this.fetch) {
+          throw new Error(
+            "Netlify Blobs could not find a `fetch` client in the global scope. You can either update your runtime to a version that includes `fetch` (like Node.js 18.0.0 or above), or you can supply your own implementation using the `fetch` property."
+          );
+        }
+      }
+      async getFinalRequest({
+        consistency: opConsistency,
+        key,
+        metadata,
+        method,
+        parameters = {},
+        storeName
+      }) {
+        const encodedMetadata = encodeMetadata(metadata);
+        const consistency = opConsistency ?? this.consistency;
+        let urlPath = `/${this.siteID}`;
+        if (storeName) {
+          urlPath += `/${storeName}`;
+        }
+        if (key) {
+          urlPath += `/${key}`;
+        }
+        if (this.edgeURL) {
+          if (consistency === "strong" && !this.uncachedEdgeURL) {
+            throw new BlobsConsistencyError();
+          }
+          const headers = {
+            authorization: `Bearer ${this.token}`
+          };
+          if (encodedMetadata) {
+            headers[METADATA_HEADER_INTERNAL] = encodedMetadata;
+          }
+          if (this.region) {
+            urlPath = `/region:${this.region}${urlPath}`;
+          }
+          const url2 = new URL(urlPath, consistency === "strong" ? this.uncachedEdgeURL : this.edgeURL);
+          for (const key2 in parameters) {
+            url2.searchParams.set(key2, parameters[key2]);
+          }
+          return {
+            headers,
+            url: url2.toString()
+          };
+        }
+        const apiHeaders = { authorization: `Bearer ${this.token}` };
+        const url = new URL(`/api/v1/blobs${urlPath}`, this.apiURL ?? "https://api.netlify.com");
+        for (const key2 in parameters) {
+          url.searchParams.set(key2, parameters[key2]);
+        }
+        if (this.region) {
+          url.searchParams.set("region", this.region);
+        }
+        if (storeName === void 0 || key === void 0) {
+          return {
+            headers: apiHeaders,
+            url: url.toString()
+          };
+        }
+        if (encodedMetadata) {
+          apiHeaders[METADATA_HEADER_EXTERNAL] = encodedMetadata;
+        }
+        if (method === "head" || method === "delete") {
+          return {
+            headers: apiHeaders,
+            url: url.toString()
+          };
+        }
+        const res = await this.fetch(url.toString(), {
+          headers: { ...apiHeaders, accept: SIGNED_URL_ACCEPT_HEADER },
+          method
+        });
+        if (res.status !== 200) {
+          throw new BlobsInternalError(res);
+        }
+        const { url: signedURL } = await res.json();
+        const userHeaders = encodedMetadata ? { [METADATA_HEADER_INTERNAL]: encodedMetadata } : void 0;
+        return {
+          headers: userHeaders,
+          url: signedURL
+        };
+      }
+      async makeRequest({
+        body,
+        conditions = {},
+        consistency,
+        headers: extraHeaders,
+        key,
+        metadata,
+        method,
+        parameters,
+        storeName
+      }) {
+        const { headers: baseHeaders = {}, url } = await this.getFinalRequest({
+          consistency,
+          key,
+          metadata,
+          method,
+          parameters,
+          storeName
+        });
+        const headers = {
+          ...baseHeaders,
+          ...extraHeaders
+        };
+        if (method === "put") {
+          headers["cache-control"] = "max-age=0, stale-while-revalidate=60";
+        }
+        if ("onlyIfMatch" in conditions && conditions.onlyIfMatch) {
+          headers["if-match"] = conditions.onlyIfMatch;
+        } else if ("onlyIfNew" in conditions && conditions.onlyIfNew) {
+          headers["if-none-match"] = "*";
+        }
+        const options = {
+          body,
+          headers,
+          method
+        };
+        if (body instanceof ReadableStream) {
+          options.duplex = "half";
+        }
+        return fetchAndRetry(this.fetch, url, options);
+      }
+    };
+    var getClientOptions = (options, contextOverride) => {
+      const context = contextOverride ?? getEnvironmentContext();
+      const siteID = context.siteID ?? options.siteID;
+      const token = context.token ?? options.token;
+      if (!siteID || !token) {
+        throw new MissingBlobsEnvironmentError(["siteID", "token"]);
+      }
+      if (options.region !== void 0 && !isValidRegion(options.region)) {
+        throw new InvalidBlobsRegionError(options.region);
+      }
+      const clientOptions = {
+        apiURL: context.apiURL ?? options.apiURL,
+        consistency: options.consistency,
+        edgeURL: context.edgeURL ?? options.edgeURL,
+        fetch: options.fetch,
+        region: options.region,
+        siteID,
+        token,
+        uncachedEdgeURL: context.uncachedEdgeURL ?? options.uncachedEdgeURL
+      };
+      return clientOptions;
+    };
+    var DEPLOY_STORE_PREFIX = "deploy:";
+    var LEGACY_STORE_INTERNAL_PREFIX = "netlify-internal/legacy-namespace/";
+    var SITE_STORE_PREFIX = "site:";
+    var STATUS_OK = 200;
+    var STATUS_PRE_CONDITION_FAILED = 412;
+    var Store = class _Store {
+      constructor(options) {
+        this.client = options.client;
+        if ("deployID" in options) {
+          _Store.validateDeployID(options.deployID);
+          let name = DEPLOY_STORE_PREFIX + options.deployID;
+          if (options.name) {
+            name += `:${options.name}`;
+          }
+          this.name = name;
+        } else if (options.name.startsWith(LEGACY_STORE_INTERNAL_PREFIX)) {
+          const storeName = options.name.slice(LEGACY_STORE_INTERNAL_PREFIX.length);
+          _Store.validateStoreName(storeName);
+          this.name = storeName;
+        } else {
+          _Store.validateStoreName(options.name);
+          this.name = SITE_STORE_PREFIX + options.name;
+        }
+      }
+      async delete(key) {
+        const res = await this.client.makeRequest({ key, method: "delete", storeName: this.name });
+        if (![200, 204, 404].includes(res.status)) {
+          throw new BlobsInternalError(res);
+        }
+      }
+      async deleteAll() {
+        let totalDeletedBlobs = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const res = await this.client.makeRequest({ method: "delete", storeName: this.name });
+          if (res.status !== 200) {
+            throw new BlobsInternalError(res);
+          }
+          const data = await res.json();
+          if (typeof data.blobs_deleted !== "number") {
+            throw new BlobsInternalError(res);
+          }
+          totalDeletedBlobs += data.blobs_deleted;
+          hasMore = typeof data.has_more === "boolean" && data.has_more;
+        }
+        return {
+          deletedBlobs: totalDeletedBlobs
+        };
+      }
+      async get(key, options) {
+        return withSpan(options?.span, "blobs.get", async (span) => {
+          const { consistency, type } = options ?? {};
+          span?.setAttributes({
+            "blobs.store": this.name,
+            "blobs.key": key,
+            "blobs.type": type,
+            "blobs.method": "GET",
+            "blobs.consistency": consistency
+          });
+          const res = await this.client.makeRequest({
+            consistency,
+            key,
+            method: "get",
+            storeName: this.name
+          });
+          span?.setAttributes({
+            "blobs.response.body.size": res.headers.get("content-length") ?? void 0,
+            "blobs.response.status": res.status
+          });
+          if (res.status === 404) {
+            return null;
+          }
+          if (res.status !== 200) {
+            throw new BlobsInternalError(res);
+          }
+          if (type === void 0 || type === "text") {
+            return res.text();
+          }
+          if (type === "arrayBuffer") {
+            return res.arrayBuffer();
+          }
+          if (type === "blob") {
+            return res.blob();
+          }
+          if (type === "json") {
+            return res.json();
+          }
+          if (type === "stream") {
+            return res.body;
+          }
+          throw new BlobsInternalError(res);
+        });
+      }
+      async getMetadata(key, options = {}) {
+        return withSpan(options?.span, "blobs.getMetadata", async (span) => {
+          span?.setAttributes({
+            "blobs.store": this.name,
+            "blobs.key": key,
+            "blobs.method": "HEAD",
+            "blobs.consistency": options.consistency
+          });
+          const res = await this.client.makeRequest({
+            consistency: options.consistency,
+            key,
+            method: "head",
+            storeName: this.name
+          });
+          span?.setAttributes({
+            "blobs.response.status": res.status
+          });
+          if (res.status === 404) {
+            return null;
+          }
+          if (res.status !== 200 && res.status !== 304) {
+            throw new BlobsInternalError(res);
+          }
+          const etag = res?.headers.get("etag") ?? void 0;
+          const metadata = getMetadataFromResponse(res);
+          const result = {
+            etag,
+            metadata
+          };
+          return result;
+        });
+      }
+      async getWithMetadata(key, options) {
+        return withSpan(options?.span, "blobs.getWithMetadata", async (span) => {
+          const { consistency, etag: requestETag, type } = options ?? {};
+          const headers = requestETag ? { "if-none-match": requestETag } : void 0;
+          span?.setAttributes({
+            "blobs.store": this.name,
+            "blobs.key": key,
+            "blobs.method": "GET",
+            "blobs.consistency": options?.consistency,
+            "blobs.type": type,
+            "blobs.request.etag": requestETag
+          });
+          const res = await this.client.makeRequest({
+            consistency,
+            headers,
+            key,
+            method: "get",
+            storeName: this.name
+          });
+          const responseETag = res?.headers.get("etag") ?? void 0;
+          span?.setAttributes({
+            "blobs.response.body.size": res.headers.get("content-length") ?? void 0,
+            "blobs.response.etag": responseETag,
+            "blobs.response.status": res.status
+          });
+          if (res.status === 404) {
+            return null;
+          }
+          if (res.status !== 200 && res.status !== 304) {
+            throw new BlobsInternalError(res);
+          }
+          const metadata = getMetadataFromResponse(res);
+          const result = {
+            etag: responseETag,
+            metadata
+          };
+          if (res.status === 304 && requestETag) {
+            return { data: null, ...result };
+          }
+          if (type === void 0 || type === "text") {
+            return { data: await res.text(), ...result };
+          }
+          if (type === "arrayBuffer") {
+            return { data: await res.arrayBuffer(), ...result };
+          }
+          if (type === "blob") {
+            return { data: await res.blob(), ...result };
+          }
+          if (type === "json") {
+            return { data: await res.json(), ...result };
+          }
+          if (type === "stream") {
+            return { data: res.body, ...result };
+          }
+          throw new Error(`Invalid 'type' property: ${type}. Expected: arrayBuffer, blob, json, stream, or text.`);
+        });
+      }
+      list(options = {}) {
+        return withSpan(options.span, "blobs.list", (span) => {
+          span?.setAttributes({
+            "blobs.store": this.name,
+            "blobs.method": "GET",
+            "blobs.list.paginate": options.paginate ?? false
+          });
+          const iterator = this.getListIterator(options);
+          if (options.paginate) {
+            return iterator;
+          }
+          return collectIterator(iterator).then(
+            (items) => items.reduce(
+              (acc, item) => ({
+                blobs: [...acc.blobs, ...item.blobs],
+                directories: [...acc.directories, ...item.directories]
+              }),
+              { blobs: [], directories: [] }
+            )
+          );
+        });
+      }
+      async set(key, data, options = {}) {
+        return withSpan(options.span, "blobs.set", async (span) => {
+          span?.setAttributes({
+            "blobs.store": this.name,
+            "blobs.key": key,
+            "blobs.method": "PUT",
+            "blobs.data.size": typeof data == "string" ? data.length : data instanceof Blob ? data.size : data.byteLength,
+            "blobs.data.type": typeof data == "string" ? "string" : data instanceof Blob ? "blob" : "arrayBuffer",
+            "blobs.atomic": Boolean(options.onlyIfMatch ?? options.onlyIfNew)
+          });
+          _Store.validateKey(key);
+          const conditions = _Store.getConditions(options);
+          const res = await this.client.makeRequest({
+            conditions,
+            body: data,
+            key,
+            metadata: options.metadata,
+            method: "put",
+            storeName: this.name
+          });
+          const etag = res.headers.get("etag") ?? "";
+          span?.setAttributes({
+            "blobs.response.etag": etag,
+            "blobs.response.status": res.status
+          });
+          if (conditions) {
+            return res.status === STATUS_PRE_CONDITION_FAILED ? { modified: false } : { etag, modified: true };
+          }
+          if (res.status === STATUS_OK) {
+            return {
+              etag,
+              modified: true
+            };
+          }
+          throw new BlobsInternalError(res);
+        });
+      }
+      async setJSON(key, data, options = {}) {
+        return withSpan(options.span, "blobs.setJSON", async (span) => {
+          span?.setAttributes({
+            "blobs.store": this.name,
+            "blobs.key": key,
+            "blobs.method": "PUT",
+            "blobs.data.type": "json"
+          });
+          _Store.validateKey(key);
+          const conditions = _Store.getConditions(options);
+          const payload = JSON.stringify(data);
+          const headers = {
+            "content-type": "application/json"
+          };
+          const res = await this.client.makeRequest({
+            ...conditions,
+            body: payload,
+            headers,
+            key,
+            metadata: options.metadata,
+            method: "put",
+            storeName: this.name
+          });
+          const etag = res.headers.get("etag") ?? "";
+          span?.setAttributes({
+            "blobs.response.etag": etag,
+            "blobs.response.status": res.status
+          });
+          if (conditions) {
+            return res.status === STATUS_PRE_CONDITION_FAILED ? { modified: false } : { etag, modified: true };
+          }
+          if (res.status === STATUS_OK) {
+            return {
+              etag,
+              modified: true
+            };
+          }
+          throw new BlobsInternalError(res);
+        });
+      }
+      static formatListResultBlob(result) {
+        if (!result.key) {
+          return null;
+        }
+        return {
+          etag: result.etag,
+          key: result.key
+        };
+      }
+      static getConditions(options) {
+        if ("onlyIfMatch" in options && "onlyIfNew" in options) {
+          throw new Error(
+            `The 'onlyIfMatch' and 'onlyIfNew' options are mutually exclusive. Using 'onlyIfMatch' will make the write succeed only if there is an entry for the key with the given content, while 'onlyIfNew' will make the write succeed only if there is no entry for the key.`
+          );
+        }
+        if ("onlyIfMatch" in options && options.onlyIfMatch) {
+          if (typeof options.onlyIfMatch !== "string") {
+            throw new Error(`The 'onlyIfMatch' property expects a string representing an ETag.`);
+          }
+          return {
+            onlyIfMatch: options.onlyIfMatch
+          };
+        }
+        if ("onlyIfNew" in options && options.onlyIfNew) {
+          if (typeof options.onlyIfNew !== "boolean") {
+            throw new Error(
+              `The 'onlyIfNew' property expects a boolean indicating whether the write should fail if an entry for the key already exists.`
+            );
+          }
+          return {
+            onlyIfNew: true
+          };
+        }
+      }
+      static validateKey(key) {
+        if (key === "") {
+          throw new Error("Blob key must not be empty.");
+        }
+        if (key.startsWith("/") || key.startsWith("%2F")) {
+          throw new Error("Blob key must not start with forward slash (/).");
+        }
+        if (new TextEncoder().encode(key).length > 600) {
+          throw new Error(
+            "Blob key must be a sequence of Unicode characters whose UTF-8 encoding is at most 600 bytes long."
+          );
+        }
+      }
+      static validateDeployID(deployID) {
+        if (!/^\w{1,24}$/.test(deployID)) {
+          throw new Error(`'${deployID}' is not a valid Netlify deploy ID.`);
+        }
+      }
+      static validateStoreName(name) {
+        if (name.includes("/") || name.includes("%2F")) {
+          throw new Error("Store name must not contain forward slashes (/).");
+        }
+        if (new TextEncoder().encode(name).length > 64) {
+          throw new Error(
+            "Store name must be a sequence of Unicode characters whose UTF-8 encoding is at most 64 bytes long."
+          );
+        }
+      }
+      getListIterator(options) {
+        const { client, name: storeName } = this;
+        const parameters = {};
+        if (options?.prefix) {
+          parameters.prefix = options.prefix;
+        }
+        if (options?.directories) {
+          parameters.directories = "true";
+        }
+        return {
+          [Symbol.asyncIterator]() {
+            let currentCursor = null;
+            let done = false;
+            return {
+              async next() {
+                return withSpan(options?.span, "blobs.list.next", async (span) => {
+                  span?.setAttributes({
+                    "blobs.store": storeName,
+                    "blobs.method": "GET",
+                    "blobs.list.paginate": options?.paginate ?? false,
+                    "blobs.list.done": done,
+                    "blobs.list.cursor": currentCursor ?? void 0
+                  });
+                  if (done) {
+                    return { done: true, value: void 0 };
+                  }
+                  const nextParameters = { ...parameters };
+                  if (currentCursor !== null) {
+                    nextParameters.cursor = currentCursor;
+                  }
+                  const res = await client.makeRequest({
+                    method: "get",
+                    parameters: nextParameters,
+                    storeName
+                  });
+                  span?.setAttributes({
+                    "blobs.response.status": res.status
+                  });
+                  let blobs = [];
+                  let directories = [];
+                  if (![200, 204, 404].includes(res.status)) {
+                    throw new BlobsInternalError(res);
+                  }
+                  if (res.status === 404) {
+                    done = true;
+                  } else {
+                    const page = await res.json();
+                    if (page.next_cursor) {
+                      currentCursor = page.next_cursor;
+                    } else {
+                      done = true;
+                    }
+                    blobs = (page.blobs ?? []).map(_Store.formatListResultBlob).filter(Boolean);
+                    directories = page.directories ?? [];
+                  }
+                  return {
+                    done: false,
+                    value: {
+                      blobs,
+                      directories
+                    }
+                  };
+                });
+              }
+            };
+          }
+        };
+      }
+    };
+    var getDeployStore = (input = {}, options) => {
+      const context = getEnvironmentContext();
+      const mergedOptions = typeof input === "string" ? { ...options, name: input } : input;
+      const deployID = mergedOptions.deployID ?? context.deployID;
+      if (!deployID) {
+        throw new MissingBlobsEnvironmentError(["deployID"]);
+      }
+      const clientOptions = getClientOptions(mergedOptions, context);
+      if (!clientOptions.region) {
+        if (clientOptions.edgeURL || clientOptions.uncachedEdgeURL) {
+          if (!context.primaryRegion) {
+            throw new Error(
+              "When accessing a deploy store, the Netlify Blobs client needs to be configured with a region, and one was not found in the environment. To manually set the region, set the `region` property in the `getDeployStore` options. If you are using the Netlify CLI, you may have an outdated version; run `npm install -g netlify-cli@latest` to update and try again."
+            );
+          }
+          clientOptions.region = context.primaryRegion;
+        } else {
+          clientOptions.region = REGION_AUTO;
+        }
+      }
+      const client = new Client(clientOptions);
+      return new Store({ client, deployID, name: mergedOptions.name });
+    };
+    var getStore = (input, options) => {
+      if (typeof input === "string") {
+        const contextOverride = options?.siteID && options?.token ? { siteID: options?.siteID, token: options?.token } : void 0;
+        const clientOptions = getClientOptions(options ?? {}, contextOverride);
+        const client = new Client(clientOptions);
+        return new Store({ client, name: input });
+      }
+      if (typeof input?.name === "string") {
+        const { name } = input;
+        const contextOverride = input?.siteID && input?.token ? { siteID: input?.siteID, token: input?.token } : void 0;
+        const clientOptions = getClientOptions(input, contextOverride);
+        if (!name) {
+          throw new MissingBlobsEnvironmentError(["name"]);
+        }
+        const client = new Client(clientOptions);
+        return new Store({ client, name });
+      }
+      if (typeof input?.deployID === "string") {
+        const clientOptions = getClientOptions(input);
+        const { deployID } = input;
+        if (!deployID) {
+          throw new MissingBlobsEnvironmentError(["deployID"]);
+        }
+        const client = new Client(clientOptions);
+        return new Store({ client, deployID });
+      }
+      throw new Error(
+        "The `getStore` method requires the name of the store as a string or as the `name` property of an options object"
+      );
+    };
+    function listStores(options = {}) {
+      const context = getEnvironmentContext();
+      const clientOptions = getClientOptions(options, context);
+      const client = new Client(clientOptions);
+      const iterator = getListIterator(client, SITE_STORE_PREFIX);
+      if (options.paginate) {
+        return iterator;
+      }
+      return collectIterator(iterator).then((results) => ({ stores: results.flatMap((page) => page.stores) }));
+    }
+    var formatListStoreResponse = (stores) => stores.filter((store) => !store.startsWith(DEPLOY_STORE_PREFIX)).map((store) => store.startsWith(SITE_STORE_PREFIX) ? store.slice(SITE_STORE_PREFIX.length) : store);
+    var getListIterator = (client, prefix) => {
+      const parameters = {
+        prefix
+      };
+      return {
+        [Symbol.asyncIterator]() {
+          let currentCursor = null;
+          let done = false;
+          return {
+            async next() {
+              if (done) {
+                return { done: true, value: void 0 };
+              }
+              const nextParameters = { ...parameters };
+              if (currentCursor !== null) {
+                nextParameters.cursor = currentCursor;
+              }
+              const res = await client.makeRequest({
+                method: "get",
+                parameters: nextParameters
+              });
+              if (res.status === 404) {
+                return { done: true, value: void 0 };
+              }
+              const page = await res.json();
+              if (page.next_cursor) {
+                currentCursor = page.next_cursor;
+              } else {
+                done = true;
+              }
+              return {
+                done: false,
+                value: {
+                  ...page,
+                  stores: formatListStoreResponse(page.stores)
+                }
+              };
+            }
+          };
+        }
+      };
+    };
+  }
+});
+
 // node_modules/depd/index.js
 var require_depd = __commonJS({
   "node_modules/depd/index.js"(exports2, module2) {
@@ -7882,8 +8858,8 @@ var require_raw_body = __commonJS({
           type: "entity.too.large"
         }));
       }
-      var state = stream._readableState;
-      if (stream._decoder || state && (state.encoding || state.decoder)) {
+      var state2 = stream._readableState;
+      if (stream._decoder || state2 && (state2.encoding || state2.decoder)) {
         return done(createError(500, "stream encoding should not be set", {
           type: "stream.encoding.set"
         }));
@@ -28357,8 +29333,8 @@ var require_util = __commonJS({
       if (body == null) {
         return 0;
       } else if (isStream(body)) {
-        const state = body._readableState;
-        return state && state.objectMode === false && state.ended === true && Number.isFinite(state.length) ? state.length : null;
+        const state2 = body._readableState;
+        return state2 && state2.objectMode === false && state2.ended === true && Number.isFinite(state2.length) ? state2.length : null;
       } else if (isBlobLike(body)) {
         return body.size != null ? body.size : null;
       } else if (isBuffer(body)) {
@@ -33019,7 +33995,7 @@ var require_formdata = __commonJS({
         }
       }
       [nodeUtil.inspect.custom](depth, options) {
-        const state = this.#state.reduce((a, b) => {
+        const state2 = this.#state.reduce((a, b) => {
           if (a[b.name]) {
             if (Array.isArray(a[b.name])) {
               a[b.name].push(b.value);
@@ -33033,7 +34009,7 @@ var require_formdata = __commonJS({
         }, { __proto__: null });
         options.depth ??= depth;
         options.colors ??= true;
-        const output = nodeUtil.formatWithOptions(options, state);
+        const output = nodeUtil.formatWithOptions(options, state2);
         return `FormData ${output.slice(output.indexOf("]") + 2)}`;
       }
       /**
@@ -35182,10 +36158,10 @@ var require_client_h2 = __commonJS({
       this[kClient][kResume]();
     }
     function onHttp2SendPing(session) {
-      const state = session[kHTTP2SessionState];
-      if ((session.closed || session.destroyed) && state.ping.interval != null) {
-        clearInterval(state.ping.interval);
-        state.ping.interval = null;
+      const state2 = session[kHTTP2SessionState];
+      if ((session.closed || session.destroyed) && state2.ping.interval != null) {
+        clearInterval(state2.ping.interval);
+        state2.ping.interval = null;
         return;
       }
       session.ping(onPing.bind(session));
@@ -35238,14 +36214,14 @@ var require_client_h2 = __commonJS({
       client[kResume]();
     }
     function onHttp2SessionClose() {
-      const { [kClient]: client, [kHTTP2SessionState]: state } = this;
+      const { [kClient]: client, [kHTTP2SessionState]: state2 } = this;
       const { [kSocket]: socket } = client;
       const err = this[kSocket][kError] || this[kError] || new SocketError("closed", util.getSocketInfo(socket));
       client[kSocket] = null;
       client[kHTTPContext] = null;
-      if (state.ping.interval != null) {
-        clearInterval(state.ping.interval);
-        state.ping.interval = null;
+      if (state2.ping.interval != null) {
+        clearInterval(state2.ping.interval);
+        state2.ping.interval = null;
       }
       if (client.destroyed) {
         assert(client[kPending] === 0);
@@ -38172,7 +39148,7 @@ var require_retry_handler = __commonJS({
       onRequestUpgrade(controller, statusCode, headers, socket) {
         this.handler.onRequestUpgrade?.(controller, statusCode, headers, socket);
       }
-      static [kRetryHandlerDefaultRetry](err, { state, opts }, cb) {
+      static [kRetryHandlerDefaultRetry](err, { state: state2, opts }, cb) {
         const { statusCode, code, headers } = err;
         const { method, retryOptions } = opts;
         const {
@@ -38184,7 +39160,7 @@ var require_retry_handler = __commonJS({
           errorCodes,
           methods
         } = retryOptions;
-        const { counter } = state;
+        const { counter } = state2;
         if (code && code !== "UND_ERR_REQ_RETRY" && !errorCodes.includes(code)) {
           cb(err);
           return;
@@ -38748,19 +39724,19 @@ var require_readable = __commonJS({
       if (consume2.body === null) {
         return;
       }
-      const { _readableState: state } = consume2.stream;
-      if (state.bufferIndex) {
-        const start = state.bufferIndex;
-        const end = state.buffer.length;
+      const { _readableState: state2 } = consume2.stream;
+      if (state2.bufferIndex) {
+        const start = state2.bufferIndex;
+        const end = state2.buffer.length;
         for (let n = start; n < end; n++) {
-          consumePush(consume2, state.buffer[n]);
+          consumePush(consume2, state2.buffer[n]);
         }
       } else {
-        for (const chunk of state.buffer) {
+        for (const chunk of state2.buffer) {
           consumePush(consume2, chunk);
         }
       }
-      if (state.endEmitted) {
+      if (state2.endEmitted) {
         consumeEnd(this[kConsume], this._readableState.encoding);
       } else {
         consume2.stream.on("end", function() {
@@ -39936,9 +40912,9 @@ var require_mock_utils = __commonJS({
       if (mockDispatch2.data.callback) {
         mockDispatch2.data = { ...mockDispatch2.data, ...mockDispatch2.data.callback(opts) };
       }
-      const { data: { statusCode, data, headers, trailers, error }, delay, persist } = mockDispatch2;
+      const { data: { statusCode, data, headers, trailers, error }, delay, persist: persist2 } = mockDispatch2;
       const { timesInvoked, times } = mockDispatch2;
-      mockDispatch2.consumed = !persist && timesInvoked >= times;
+      mockDispatch2.consumed = !persist2 && timesInvoked >= times;
       mockDispatch2.pending = timesInvoked < times;
       if (error !== null) {
         deleteMockDispatch(this[kDispatches], key);
@@ -40585,14 +41561,14 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path4, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path4, data: { statusCode }, persist: persist2, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
             Path: path4,
             "Status code": statusCode,
-            Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
+            Persistent: persist2 ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
-            Remaining: persist ? Infinity : times - timesInvoked
+            Remaining: persist2 ? Infinity : times - timesInvoked
           })
         );
         this.logger.table(withPrettyHeaders);
@@ -42331,12 +43307,12 @@ var require_dns = __commonJS({
       #controller = null;
       #newOrigin = null;
       #firstTry = true;
-      constructor(state, { origin, handler: handler2, dispatch, newOrigin }, opts) {
+      constructor(state2, { origin, handler: handler2, dispatch, newOrigin }, opts) {
         super(handler2);
         this.#origin = origin;
         this.#newOrigin = newOrigin;
         this.#opts = { ...opts };
-        this.#state = state;
+        this.#state = state2;
         this.#dispatch = dispatch;
       }
       onResponseError(controller, err) {
@@ -44666,19 +45642,19 @@ var require_deduplication_handler = __commonJS({
           pendingTrailers: null,
           done: false
         };
-        const state = {
+        const state2 = {
           aborted: false,
           paused: false,
           reason: null
         };
         waitingHandler.controller = {
           resume: () => {
-            if (state.aborted) {
+            if (state2.aborted) {
               return;
             }
-            state.paused = false;
+            state2.paused = false;
             this.#flushWaitingHandler(waitingHandler);
-            if (this.#completed && waitingHandler.pendingTrailers && waitingHandler.bufferedChunks.length === 0 && !state.paused && !state.aborted) {
+            if (this.#completed && waitingHandler.pendingTrailers && waitingHandler.bufferedChunks.length === 0 && !state2.paused && !state2.aborted) {
               try {
                 waitingHandler.handler.onResponseEnd?.(waitingHandler.controller, waitingHandler.pendingTrailers);
               } catch {
@@ -44689,22 +45665,22 @@ var require_deduplication_handler = __commonJS({
             this.#pruneDoneWaitingHandlers();
           },
           pause: () => {
-            if (!state.aborted) {
-              state.paused = true;
+            if (!state2.aborted) {
+              state2.paused = true;
             }
           },
           get paused() {
-            return state.paused;
+            return state2.paused;
           },
           get aborted() {
-            return state.aborted;
+            return state2.aborted;
           },
           get reason() {
-            return state.reason;
+            return state2.reason;
           },
           abort: (reason) => {
-            state.aborted = true;
-            state.reason = reason ?? null;
+            state2.aborted = true;
+            state2.reason = reason ?? null;
             waitingHandler.done = true;
             waitingHandler.pendingTrailers = null;
             waitingHandler.bufferedChunks = [];
@@ -45954,17 +46930,17 @@ var require_response3 = __commonJS({
         response.status === 0
       );
     }
-    function makeFilteredResponse(response, state) {
-      state = {
+    function makeFilteredResponse(response, state2) {
+      state2 = {
         internalResponse: response,
-        ...state
+        ...state2
       };
       return new Proxy(response, {
         get(target, p) {
-          return p in state ? state[p] : target[p];
+          return p in state2 ? state2[p] : target[p];
         },
         set(target, p, value) {
-          assert(!(p in state));
+          assert(!(p in state2));
           target[p] = value;
           return true;
         }
@@ -52252,6 +53228,46 @@ function getDataDir() {
   return import_node_path.default.join(getProjectRoot(), "data");
 }
 
+// server/blobStore.js
+var STORE_NAME = "rialo-latch";
+var DB_KEY = "rialo.db";
+var storePromise = null;
+async function getBlobStore() {
+  if (!isServerless()) return null;
+  if (!storePromise) {
+    storePromise = (async () => {
+      try {
+        const { getStore } = await Promise.resolve().then(() => __toESM(require_main3(), 1));
+        return getStore(STORE_NAME);
+      } catch (error) {
+        console.error("[blob] getStore failed:", error?.message || error);
+        return null;
+      }
+    })();
+  }
+  return storePromise;
+}
+async function readDbBlob() {
+  const store = await getBlobStore();
+  if (!store) return null;
+  try {
+    const ab = await store.get(DB_KEY, { type: "arrayBuffer" });
+    return ab ? Buffer.from(ab) : null;
+  } catch (error) {
+    console.error("[blob] read failed:", error?.message || error);
+    return null;
+  }
+}
+async function writeDbBlob(buffer) {
+  const store = await getBlobStore();
+  if (!store) return;
+  try {
+    await store.set(DB_KEY, buffer);
+  } catch (error) {
+    console.error("[blob] write failed:", error?.message || error);
+  }
+}
+
 // server/db.js
 var SCHEMA = `
   CREATE TABLE IF NOT EXISTS users (
@@ -52306,66 +53322,76 @@ function resolveWasmPath(file) {
   }
   return import_node_path2.default.join(process.cwd(), "node_modules/sql.js/dist", name);
 }
-function createAdapter(sqlDb, dbPath) {
-  const persist = () => {
-    const dir = import_node_path2.default.dirname(dbPath);
-    import_node_fs.default.mkdirSync(dir, { recursive: true });
-    const data = sqlDb.export();
-    import_node_fs.default.writeFileSync(dbPath, Buffer.from(data));
-  };
-  return {
-    prepare(sql) {
-      return {
-        run(...params) {
-          sqlDb.run(sql, params);
-          persist();
-          return { changes: sqlDb.getRowsModified() };
-        },
-        get(...params) {
-          const stmt = sqlDb.prepare(sql);
-          try {
-            if (params.length) stmt.bind(params);
-            return stmt.step() ? stmt.getAsObject() : void 0;
-          } finally {
-            stmt.free();
-          }
-        },
-        all(...params) {
-          const stmt = sqlDb.prepare(sql);
-          const rows = [];
-          try {
-            if (params.length) stmt.bind(params);
-            while (stmt.step()) rows.push(stmt.getAsObject());
-            return rows;
-          } finally {
-            stmt.free();
-          }
-        }
-      };
-    },
-    exec(sql) {
-      sqlDb.run(sql);
-      persist();
-    }
-  };
+var state = {
+  SQL: null,
+  sqlDb: null,
+  dbPath: null,
+  dirty: false
+};
+function applySchema() {
+  state.sqlDb.run("PRAGMA foreign_keys = ON;");
+  state.sqlDb.run(SCHEMA);
 }
+function persist() {
+  state.dirty = true;
+  try {
+    import_node_fs.default.mkdirSync(import_node_path2.default.dirname(state.dbPath), { recursive: true });
+    import_node_fs.default.writeFileSync(state.dbPath, Buffer.from(state.sqlDb.export()));
+  } catch (error) {
+    console.error("[db] local persist failed:", error?.message || error);
+  }
+}
+var adapter = {
+  prepare(sql) {
+    return {
+      run(...params) {
+        state.sqlDb.run(sql, params);
+        persist();
+        return { changes: state.sqlDb.getRowsModified() };
+      },
+      get(...params) {
+        const stmt = state.sqlDb.prepare(sql);
+        try {
+          if (params.length) stmt.bind(params);
+          return stmt.step() ? stmt.getAsObject() : void 0;
+        } finally {
+          stmt.free();
+        }
+      },
+      all(...params) {
+        const stmt = state.sqlDb.prepare(sql);
+        const rows = [];
+        try {
+          if (params.length) stmt.bind(params);
+          while (stmt.step()) rows.push(stmt.getAsObject());
+          return rows;
+        } finally {
+          stmt.free();
+        }
+      }
+    };
+  },
+  exec(sql) {
+    state.sqlDb.run(sql);
+    persist();
+  }
+};
 async function initDatabase() {
   const dataDir = getDataDir();
   import_node_fs.default.mkdirSync(dataDir, { recursive: true });
-  const dbPath = import_node_path2.default.join(dataDir, "rialo.db");
-  const SQL = await (0, import_sql.default)({
+  state.dbPath = import_node_path2.default.join(dataDir, "rialo.db");
+  state.SQL = await (0, import_sql.default)({
     locateFile: (file) => resolveWasmPath(file)
   });
-  let sqlDb;
-  if (import_node_fs.default.existsSync(dbPath)) {
-    const fileBuffer = import_node_fs.default.readFileSync(dbPath);
-    sqlDb = new SQL.Database(fileBuffer);
-  } else {
-    sqlDb = new SQL.Database();
+  let bytes = null;
+  if (isServerless()) {
+    bytes = await readDbBlob();
   }
-  const adapter = createAdapter(sqlDb, dbPath);
-  adapter.exec("PRAGMA foreign_keys = ON;");
-  adapter.exec(SCHEMA);
+  if (!bytes && import_node_fs.default.existsSync(state.dbPath)) {
+    bytes = import_node_fs.default.readFileSync(state.dbPath);
+  }
+  state.sqlDb = bytes ? new state.SQL.Database(bytes) : new state.SQL.Database();
+  applySchema();
   return adapter;
 }
 var dbInstance = null;
@@ -52380,6 +53406,28 @@ function getDb() {
     throw new Error("Database not initialized");
   }
   return dbInstance;
+}
+async function reloadFromBlob() {
+  if (!isServerless() || !state.SQL) return;
+  const bytes = await readDbBlob();
+  if (bytes) {
+    try {
+      state.sqlDb = new state.SQL.Database(bytes);
+      applySchema();
+      state.dirty = false;
+    } catch (error) {
+      console.error("[db] reload failed:", error?.message || error);
+    }
+  }
+}
+async function flushToBlob() {
+  if (!isServerless() || !state.dirty || !state.sqlDb) return;
+  try {
+    await writeDbBlob(Buffer.from(state.sqlDb.export()));
+    state.dirty = false;
+  } catch (error) {
+    console.error("[db] flush failed:", error?.message || error);
+  }
 }
 var db = new Proxy(
   {},
@@ -52684,11 +53732,19 @@ function discordConfig() {
   }
   return { clientId, clientSecret, redirectUri };
 }
-function appBaseUrl() {
+function appBaseUrl(req) {
+  if (req) {
+    const forwardedHost = req.headers["x-forwarded-host"];
+    const host = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) || req.headers.host;
+    if (host && !/^localhost|127\.0\.0\.1/.test(host)) {
+      const proto = (req.headers["x-forwarded-proto"] || "").toString().split(",")[0] || (req.secure ? "https" : "http");
+      return `${proto}://${host}`;
+    }
+  }
   return process.env.APP_URL || "http://localhost:8787";
 }
 async function finishDiscordLogin(req, res, redirectUriUsed) {
-  const appUrl = appBaseUrl();
+  const appUrl = appBaseUrl(req);
   const { code, error, error_description: errorDescription } = req.query;
   if (error) {
     return res.redirect(
@@ -52771,7 +53827,7 @@ router.get("/discord/callback", async (req, res) => {
     const msg = error instanceof Error ? error.message : "callback_failed";
     console.error("[discord] callback unhandled:", msg, error?.cause || "");
     res.redirect(
-      `${appBaseUrl()}/?auth=error&message=${encodeURIComponent(msg)}`
+      `${appBaseUrl(req)}/?auth=error&message=${encodeURIComponent(msg)}`
     );
   }
 });
@@ -52815,7 +53871,7 @@ router.get("/discord/diag", async (_req, res) => {
     config: {
       clientId,
       redirectUri,
-      appUrl: appBaseUrl(),
+      appUrl: appBaseUrl(_req),
       proxy
     },
     discordApi: {
@@ -52864,12 +53920,12 @@ router.delete("/keys/:id", requireSession, (req, res) => {
 router.get("/callback-info", async (req, res) => {
   if (typeof req.query.code === "string" || typeof req.query.error === "string") {
     try {
-      const mistakenRedirect = `${appBaseUrl()}/api/auth/callback-info`;
+      const mistakenRedirect = `${appBaseUrl(req)}/api/auth/callback-info`;
       await finishDiscordLogin(req, res, mistakenRedirect);
       return;
     } catch (error) {
       return res.redirect(
-        `${appBaseUrl()}/?auth=error&message=${encodeURIComponent(
+        `${appBaseUrl(req)}/?auth=error&message=${encodeURIComponent(
           error instanceof Error ? error.message : "callback_failed"
         )}`
       );
@@ -53078,6 +54134,24 @@ function createApp({ serveStatic = false } = {}) {
   app.use((0, import_cors.default)({ origin: true, credentials: true }));
   app.use(import_express3.default.json({ limit: "256kb" }));
   app.use((0, import_cookie_parser.default)(process.env.SESSION_SECRET || "rialo-latch"));
+  if (isServerless()) {
+    app.use(async (req, res, next) => {
+      try {
+        await reloadFromBlob();
+      } catch {
+      }
+      const originalEnd = res.end;
+      let flushed = false;
+      res.end = function patchedEnd(...args) {
+        if (flushed) return originalEnd.apply(this, args);
+        flushed = true;
+        flushToBlob().catch(() => {
+        }).finally(() => originalEnd.apply(this, args));
+        return this;
+      };
+      next();
+    });
+  }
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, service: "rialo-latch" });
   });
